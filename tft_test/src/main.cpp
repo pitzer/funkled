@@ -1,6 +1,16 @@
 #include <Arduino.h>
 #include <lvgl.h>
+#include "demos/lv_demos.h"
 #include <TFT_eSPI.h>
+#include <FT6336U.h>
+
+// Touchscreen
+#define TOUCH_RST_PIN 37
+#define TOUCH_INT_PIN 30
+#define TOUCH_SCL_PIN 19
+#define TOUCH_SDA_PIN 18
+FT6336U ft6336u(TOUCH_SDA_PIN, TOUCH_SCL_PIN, TOUCH_RST_PIN, TOUCH_INT_PIN);
+
 
 // Screen resolution and rotation
 #define TFT_HOR_RES   240
@@ -21,21 +31,22 @@ static uint32_t lv_tick(void);
 static void lv_print( lv_log_level_t level, const char * buf );
 static void lv_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data );
 
-
-static lv_obj_t *label;
-static int pos = 0;
-static int dir = 1;
-
-
 //
 // The main setup function
 //
 void setup() {
   // Serial port
   Serial.begin( 115200 );
-  String LVGL_Ver = "LVGL ";
-  LVGL_Ver += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
-  Serial.println( LVGL_Ver );
+  String lvgl_ver = "LVGL ";
+  lvgl_ver += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
+  Serial.println( lvgl_ver );
+
+  // Touchscreen
+  ft6336u.begin();
+
+  String touch_ver = "FT6336U ";
+  touch_ver += String('V') + ft6336u.read_firmware_id() + String('M') + ft6336u.read_device_mode();
+  Serial.println( touch_ver );
 
   // Init LVGL core
   lv_init();
@@ -47,9 +58,9 @@ void setup() {
   lv_log_register_print_cb(lv_print);
 
   // Register TFT_espi as the display driver
-    lv_display_t * disp;
-    disp = lv_tft_espi_create(TFT_HOR_RES, TFT_VER_RES, draw_buf, sizeof(draw_buf));
-    lv_display_set_rotation(disp, TFT_ROTATION);
+  lv_display_t * disp;
+  disp = lv_tft_espi_create(TFT_HOR_RES, TFT_VER_RES, draw_buf, sizeof(draw_buf));
+  lv_display_set_rotation(disp, TFT_ROTATION);
 
   // There is no native support for the FT6336U chip in LVGL, so we use
   // a dummy driver, and we will implement the touch callback ourselves.
@@ -58,40 +69,20 @@ void setup() {
   lv_indev_set_read_cb(indev, lv_touchpad_read);
 
   // Change background color
-  lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0xffffff), LV_PART_MAIN);
-
-  // Create a label
-  label = lv_label_create( lv_screen_active() );
-  lv_label_set_text( label, "FunkLED" );
-  // increase font size
-  lv_obj_set_style_text_font(label, &lv_font_montserrat_44,  LV_PART_MAIN);
-  lv_obj_align( label, LV_ALIGN_CENTER, 0, 0 );
+  lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0x000000), LV_PART_MAIN);
 
   Serial.println( "Setup done" );
+
+  lv_demo_scroll();
 }
 
 
 void loop() {
-
-  lv_obj_align( label, LV_ALIGN_CENTER, pos / 5, 0 );
-  if (dir) {
-    pos += 1;
-  } else {
-    pos -= 1;
-  }
-  if (pos > 150) {
-    dir = 0;
-  }
-  if (pos < -150) {
-    dir = 1;
-  }
-
-
   // Main LVGL loop
   lv_timer_handler();
 
-  // Wait for a little bit
-  delay(5);
+  // Sleep a tiny bit
+  delay(1);
 }
 
 // Provides LVGL with access to the timer
@@ -132,17 +123,8 @@ static void lv_print( lv_log_level_t level, const char * buf )
 // This is polled on a regular basis
 static void lv_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data )
 {
-    /*For example  ("my_..." functions needs to be implemented by you)
-    int32_t x, y;
-    bool touched = my_get_touch( &x, &y );
-
-    if(!touched) {
-        data->state = LV_INDEV_STATE_RELEASED;
-    } else {
-        data->state = LV_INDEV_STATE_PRESSED;
-
-        data->point.x = x;
-        data->point.y = y;
-    }
-     */
+  FT6336U_TouchPointType tp = ft6336u.scan();
+  data->state = tp.touch_count ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+  data->point.x = TFT_HOR_RES - 1 - tp.tp[0].x;
+  data->point.y = TFT_VER_RES - 1 - tp.tp[0].y;
 }
