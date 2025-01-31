@@ -15,7 +15,7 @@ FT6336U ft6336u(TOUCH_SDA_PIN, TOUCH_SCL_PIN, TOUCH_RST_PIN, TOUCH_INT_PIN);
 // Screen resolution and rotation
 #define TFT_HOR_RES   240
 #define TFT_VER_RES   320
-#define TFT_ROTATION  LV_DISPLAY_ROTATION_90
+#define TFT_ROTATION  LV_DISPLAY_ROTATION_0
 
 // LVGL draws into these buffers (This is double buffered)
 // Ref: https://docs.lvgl.io/8.0/porting/display.html
@@ -125,6 +125,16 @@ static void lv_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data )
 {
   FT6336U_TouchPointType tp = ft6336u.scan();
   data->state = tp.touch_count ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
-  data->point.x = TFT_HOR_RES - 1 - tp.tp[0].x;
-  data->point.y = TFT_VER_RES - 1 - tp.tp[0].y;
+  switch(TFT_ROTATION) {
+    case LV_DISPLAY_ROTATION_90:
+    case LV_DISPLAY_ROTATION_270:
+      data->point.x = TFT_HOR_RES - 1 - tp.tp[0].x;
+      data->point.y = TFT_VER_RES - 1 - tp.tp[0].y;
+      break;
+    case LV_DISPLAY_ROTATION_0:
+    case LV_DISPLAY_ROTATION_180:
+      data->point.x = tp.tp[0].x;
+      data->point.y = tp.tp[0].y;
+      break;
+  }
 }
