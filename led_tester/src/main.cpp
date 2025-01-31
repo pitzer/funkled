@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <lvgl.h>
-#include "demos/lv_demos.h"
+#include "ui/led_tester_ui.h"
 #include <TFT_eSPI.h>
 #include <FT6336U.h>
 
@@ -80,8 +80,8 @@ void setup() {
 
   Serial.println( "Setup done" );
 
-  lv_demo_widgets();
-  //lv_demo_widgets_start_slideshow();
+  // Start the UI
+  led_tester_ui();
 }
 
 
