@@ -43,7 +43,8 @@ void setup() {
 
   // Touchscreen
   ft6336u.begin();
-
+  // Set the interrupt to polling mode (low when there is a touch, high otherwise)
+  ft6336u.write_g_mode(pollingMode);
   String touch_ver = "FT6336U ";
   touch_ver += String('V') + ft6336u.read_firmware_id() + String('M') + ft6336u.read_device_mode();
   Serial.println( touch_ver );
@@ -73,7 +74,7 @@ void setup() {
 
   Serial.println( "Setup done" );
 
-  lv_demo_scroll();
+  lv_demo_widgets();
 }
 
 
@@ -123,6 +124,11 @@ static void lv_print( lv_log_level_t level, const char * buf )
 // This is polled on a regular basis
 static void lv_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data )
 {
+  if (digitalRead(TOUCH_INT_PIN) == HIGH) {
+    // Nothing new. Return early
+    return;
+  }
+
   FT6336U_TouchPointType tp = ft6336u.scan();
   data->state = tp.touch_count ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
   switch(TFT_ROTATION) {
