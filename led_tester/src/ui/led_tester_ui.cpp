@@ -187,8 +187,8 @@ static void pattern_create(lv_obj_t * parent, pattern_type_t type, const char * 
     lv_obj_t * btn_w = lv_btn_create(parent);
     lv_obj_add_style(btn_w, &style_list_button, 0);    
     lv_obj_set_height(btn_w, LV_SIZE_CONTENT);
-    lv_obj_set_width(btn_w, LV_PCT(100));
-    static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
+    lv_obj_set_width(btn_w, LV_PCT(97));
+    static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, 1, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
     static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
     lv_obj_set_grid_dsc_array(btn_w, grid_col_dsc, grid_row_dsc);
 
@@ -196,7 +196,7 @@ static void pattern_create(lv_obj_t * parent, pattern_type_t type, const char * 
     lv_obj_t * name_w = lv_label_create(btn_w);
     lv_label_set_text(name_w, name);
     lv_obj_add_style(name_w, &style_title, 0);
-    lv_obj_set_grid_cell(name_w, LV_GRID_ALIGN_START, 0, 4, LV_GRID_ALIGN_START, 0, 1);
+    lv_obj_set_grid_cell(name_w, LV_GRID_ALIGN_START, 0, 3, LV_GRID_ALIGN_START, 0, 1);
     
     // The leds
     lv_obj_t * led_w[3];
@@ -213,8 +213,9 @@ static void pattern_create(lv_obj_t * parent, pattern_type_t type, const char * 
     lv_obj_t * desc_w = lv_label_create(btn_w);
     lv_obj_add_style(desc_w, &style_text_muted, 0);
     lv_label_set_text(desc_w, desc);
+    //lv_obj_set_width(desc_w, LV_PCT(70));
+    lv_obj_set_grid_cell(desc_w, LV_GRID_ALIGN_STRETCH, 4, 1, LV_GRID_ALIGN_START, 0, 2);
     lv_label_set_long_mode(desc_w, LV_LABEL_LONG_WRAP);
-    lv_obj_set_grid_cell(desc_w, LV_GRID_ALIGN_START, 3, 1, LV_GRID_ALIGN_START, 1, 1);
 
     // Layout
 //LV_SYMBOL_ENVELOPE        static int32_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
