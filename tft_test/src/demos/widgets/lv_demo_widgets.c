@@ -149,7 +149,7 @@ void lv_demo_widgets(void)
 #endif
     }
     else {   /* disp_size == DISP_SMALL */
-        tab_h = 45;
+        tab_h = 30;
 #if LV_FONT_MONTSERRAT_18
         font_large     = &lv_font_montserrat_18;
 #else

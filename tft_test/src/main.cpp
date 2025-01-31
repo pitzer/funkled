@@ -13,9 +13,15 @@ FT6336U ft6336u(TOUCH_SDA_PIN, TOUCH_SCL_PIN, TOUCH_RST_PIN, TOUCH_INT_PIN);
 
 
 // Screen resolution and rotation
-#define TFT_HOR_RES   240
-#define TFT_VER_RES   320
-#define TFT_ROTATION  LV_DISPLAY_ROTATION_0
+#ifdef HOSYOND_3_2_TFT
+  #define TFT_HOR_RES   240
+  #define TFT_VER_RES   320
+#endif
+#ifdef HOSYOND_4_0_TFT
+  #define TFT_HOR_RES   320
+  #define TFT_VER_RES   480
+#endif
+#define TFT_ROTATION  LV_DISPLAY_ROTATION_270
 
 // LVGL draws into these buffers (This is double buffered)
 // Ref: https://docs.lvgl.io/8.0/porting/display.html
@@ -75,6 +81,7 @@ void setup() {
   Serial.println( "Setup done" );
 
   lv_demo_widgets();
+  //lv_demo_widgets_start_slideshow();
 }
 
 
