@@ -29,7 +29,7 @@ static lv_obj_t* pattern_widget_create(lv_obj_t* parent, pattern_type_t type, co
 static lv_obj_t* led_widget(lv_obj_t* parent, int size);
 static void led_set_color(lv_obj_t* led, lv_color_t color);
 static void leds_timer_cb(lv_timer_t* timer);
-
+static void colorwheel_pressed_cb(lv_event_t * e);
 //static void analytics_create(lv_obj_t * parent);
 //static void shop_create(lv_obj_t * parent);
 //static void color_changer_create(lv_obj_t * parent);
@@ -146,22 +146,35 @@ void led_tester_ui(void)
 
     lv_obj_set_style_text_font(lv_screen_active(), font_normal, 0);
 
-    String pattern_str = String(LV_SYMBOL_SHUFFLE) + " Pattern";
-    String color_str = String(LV_SYMBOL_TINT) + " Color";
-    String options_str = String(LV_SYMBOL_SETTINGS) + " Options";
-    lv_obj_t * t1_w = lv_tabview_add_tab(tv, pattern_str.c_str());
-    lv_obj_t * t2_w = lv_tabview_add_tab(tv, color_str.c_str());
-    lv_obj_t * t3_w = lv_tabview_add_tab(tv, options_str.c_str());
 
+    // First tab: patterns
+    String pattern_str = String(LV_SYMBOL_LOOP) + " Pattern";
+    lv_obj_t* t1_w = lv_tabview_add_tab(tv, pattern_str.c_str());
     pattern_widget_create(t1_w, PATTERN_FADE, "Fade", "Fade in and out and do plenty of stuff and this should now wrap");
     pattern_widget_create(t1_w, PATTERN_BLINK, "Blink", "Blink on and off");
     pattern_widget_create(t1_w, PATTERN_FADE, "Fade", "Fade in and out");
     pattern_widget_create(t1_w, PATTERN_BLINK, "Blink", "Blink on and off");
-
     lv_obj_set_flex_flow(t1_w, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_style(t1_w, &style_list, 0);
 
-    // Create a timer for the LED pattern
+    // Second tab: colors
+    String color_str = String(LV_SYMBOL_TINT) + " Color";
+    lv_obj_t* t2_w = lv_tabview_add_tab(tv, color_str.c_str());
+    lv_obj_t* color_changer_w = lv_btn_create(t2_w);
+    lv_obj_add_style(color_changer_w, &style_list_button, 0);    
+    LV_IMAGE_DECLARE(img_colorwheel); 
+    lv_obj_set_height(color_changer_w, LV_SIZE_CONTENT);
+    lv_obj_set_width(color_changer_w, LV_SIZE_CONTENT);
+    lv_obj_t* color_image_w = lv_image_create(color_changer_w);
+    lv_image_set_src(color_image_w, &img_colorwheel);
+    lv_obj_add_event_cb(color_changer_w, colorwheel_pressed_cb, LV_EVENT_PRESSING, color_image_w);
+
+    // third tab: options
+    String options_str = String(LV_SYMBOL_SETTINGS) + " Options";
+    lv_obj_t* t3_w = lv_tabview_add_tab(tv, options_str.c_str());
+
+
+    // Create a timer for the LED patterns
     lv_timer_create(leds_timer_cb, 15, NULL);
 }
 
@@ -284,6 +297,52 @@ static void leds_timer_cb(lv_timer_t * timer)
     }
 }
 
+static void colorwheel_pressed_cb(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_PRESSING) {
+        lv_indev_t * indev = lv_indev_active();
+        if(indev == NULL) return;
+        lv_indev_type_t indev_type = lv_indev_get_type(indev);
+        if(indev_type != LV_INDEV_TYPE_POINTER) return;
+        lv_point_t p;
+        lv_indev_get_point(indev, &p);
+        // Get coordinates relative to the center of the image
+        lv_obj_t* image_w = (lv_obj_t*) lv_event_get_user_data(e);
+        lv_area_t image_coords;
+        lv_obj_get_coords(image_w, &image_coords);
+        p.x -= image_coords.x1;
+        p.y -= image_coords.y1;
+        // Get the pixel color and alpha
+        lv_image_dsc_t* image_dcs = (lv_image_dsc_t*) lv_image_get_src(image_w);
+        if (image_dcs->header.cf != LV_COLOR_FORMAT_RGB565A8) {
+            return;
+        }
+        if (p.x < 0 || p.y < 0 || p.x >= image_dcs->header.w || p.y >= image_dcs->header.h) {
+            return;
+        }
+        uint32_t offset_rgb = (p.y * image_dcs->header.w + p.x) * 2;
+        uint32_t offset_alpha = image_dcs->header.w * image_dcs->header.h * 2 + p.y * image_dcs->header.w + p.x;
+        uint8_t alpha = image_dcs->data[offset_alpha];
+        uint16_t rgb = image_dcs->data[offset_rgb] | (image_dcs->data[offset_rgb + 1] << 8);
+        uint8_t r = (rgb & 0xF800) >> 8;
+        uint8_t g = (rgb & 0x07E0) >> 3;
+        uint8_t b = (rgb & 0x001F) << 3;
+        lv_color_t color = lv_color_make(r, g, b);
+        Serial.print("Colorwheel pressed ");
+        Serial.print(p.x);
+        Serial.print(", ");
+        Serial.print(p.y);
+        Serial.print(", Color: ");
+        Serial.print(alpha);
+        Serial.print(", ");
+        Serial.print(r);
+        Serial.print(", ");
+        Serial.print(g);
+        Serial.print(", ");
+        Serial.println(b);
+        return;
+    }
+}
 #if 0
 
 
