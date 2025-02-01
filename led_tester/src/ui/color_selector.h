@@ -1,5 +1,5 @@
-#ifndef LV_TESTER_UI_H
-#define LV_TESTER_UI_H
+#ifndef LV_COLOR_SELECTOR_H
+#define LV_COLOR_SELECTOR_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,17 +11,13 @@ extern "C" {
 #error "LV_USE_GRID needs to be enabled"
 #endif
 
-#if LV_USE_FLEX == 0
-#error "LV_USE_FLEX needs to be enabled"
-#endif
-
 /**********************
  * GLOBAL PROTOTYPES
  **********************/
-void led_tester_ui(void);
+lv_obj_t* color_selector_create(lv_obj_t* parent);
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
-#endif /*LV_TESTER_UI_H*/
+#endif /*LV_COLOR_SELECTOR_H*/
