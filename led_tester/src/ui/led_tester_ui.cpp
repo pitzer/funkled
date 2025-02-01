@@ -2,7 +2,15 @@
 #include <Arduino.h>
 
 //
-// TYPEDEFS
+// Constants
+//
+// The number of LEDs shown on each pattern widget
+static const int LED_WIDGET_COUNT = 8;
+// The maximum number of patterns we can show
+static const int MAX_PATTERNS = 64;
+
+//
+// Typedefs
 //
 typedef enum {
     PATTERN_FADE,
@@ -11,14 +19,16 @@ typedef enum {
 
 typedef struct {
     pattern_type_t type;
-    lv_obj_t* leds[4];
+    lv_obj_t* leds[LED_WIDGET_COUNT];
 } led_t;
 
 //
-// STATIC PROTOTYPES
+// Static prototypes
 //
-static void pattern_create(lv_obj_t * parent, pattern_type_t type, const char * title, const char * desc);
-static void leds_timer_cb(lv_timer_t * timer);
+static lv_obj_t* pattern_widget_create(lv_obj_t* parent, pattern_type_t type, const char* title, const char* desc);
+static lv_obj_t* led_widget(lv_obj_t* parent, int size);
+static void led_set_color(lv_obj_t* led, lv_color_t color);
+static void leds_timer_cb(lv_timer_t* timer);
 
 //static void analytics_create(lv_obj_t * parent);
 //static void shop_create(lv_obj_t * parent);
@@ -48,7 +58,7 @@ static void leds_timer_cb(lv_timer_t * timer);
 //static void scale3_delete_event_cb(lv_event_t * e);
 //
 //
-// STATIC VARIABLES
+// Static variables
 //
 // Fonts
 static const lv_font_t * font_large;
@@ -61,7 +71,6 @@ static lv_style_t style_list_button;
 // Tab views
 static lv_obj_t * tv;
 // The LEDs that we can control on a pattern
-#define MAX_PATTERNS 64
 static int pattern_count = 0;
 static led_t leds[MAX_PATTERNS];
 
@@ -101,9 +110,9 @@ static led_t leds[MAX_PATTERNS];
 //static lv_obj_t * scale3_needle;
 //static lv_obj_t * scale3_mbps_label;
 
-/**********************
- *   GLOBAL FUNCTIONS
- **********************/
+//
+// Global functions
+//
 
 void led_tester_ui(void)
 {
@@ -127,10 +136,10 @@ void led_tester_ui(void)
     // Button inside a list
     lv_style_init(&style_list_button);
     lv_style_set_border_width(&style_list_button, 0);
-    lv_style_set_bg_color(&style_list_button, lv_color_hex(0xE0E0E0));
+    lv_style_set_bg_opa(&style_list_button, 35);
     lv_style_set_text_color(&style_list_button, lv_color_hex(0x202020));
     lv_style_set_pad_all(&style_list_button, 8);
-    lv_style_set_pad_gap(&style_list_button, 10);
+    lv_style_set_pad_gap(&style_list_button, 3);
 
     tv = lv_tabview_create(lv_screen_active());
     lv_tabview_set_tab_bar_size(tv, tab_h);
@@ -144,61 +153,28 @@ void led_tester_ui(void)
     lv_obj_t * t2_w = lv_tabview_add_tab(tv, color_str.c_str());
     lv_obj_t * t3_w = lv_tabview_add_tab(tv, options_str.c_str());
 
-    pattern_create(t1_w, PATTERN_FADE, "Fade", "Fade in and out and do plenty of stuff and this should now wrap");
-    pattern_create(t1_w, PATTERN_BLINK, "Blink", "Blink on and off");
-    pattern_create(t1_w, PATTERN_FADE, "Fade", "Fade in and out");
-    pattern_create(t1_w, PATTERN_BLINK, "Blink", "Blink on and off");
+    pattern_widget_create(t1_w, PATTERN_FADE, "Fade", "Fade in and out and do plenty of stuff and this should now wrap");
+    pattern_widget_create(t1_w, PATTERN_BLINK, "Blink", "Blink on and off");
+    pattern_widget_create(t1_w, PATTERN_FADE, "Fade", "Fade in and out");
+    pattern_widget_create(t1_w, PATTERN_BLINK, "Blink", "Blink on and off");
 
     lv_obj_set_flex_flow(t1_w, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_style(t1_w, &style_list, 0);
 
     // Create a timer for the LED pattern
-    lv_timer_t * leds_timer = lv_timer_create(leds_timer_cb, 30, NULL);
-
-    // // One column, 100% of the available width
-    // static int32_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-    // // Three rows, 100% of the content size
-    // static int32_t grid_main_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
-    // lv_obj_set_grid_dsc_array(t1, grid_main_col_dsc, grid_main_row_dsc);
-    //     lv_obj_set_grid_cell(panel1, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
-
-
-//    if(disp_size == DISP_LARGE) {
-//        lv_obj_t * tab_bar = lv_tabview_get_tab_bar(tv);
-//        lv_obj_set_style_pad_left(tab_bar, LV_HOR_RES / 2, 0);
-//        lv_obj_t * logo = lv_image_create(tab_bar);
-//        lv_obj_add_flag(logo, LV_OBJ_FLAG_IGNORE_LAYOUT);
-//        LV_IMAGE_DECLARE(img_lvgl_logo);
-//        lv_image_set_src(logo, &img_lvgl_logo);
-//        lv_obj_align(logo, LV_ALIGN_LEFT_MID, -LV_HOR_RES / 2 + 25, 0);
-//
-//        lv_obj_t * label = lv_label_create(tab_bar);
-//        lv_obj_add_style(label, &style_title, 0);
-//        lv_obj_add_flag(label, LV_OBJ_FLAG_IGNORE_LAYOUT);
-//        lv_label_set_text_fmt(label, "LVGL v%d.%d.%d", lv_version_major(), lv_version_minor(), lv_version_patch());
-//        lv_obj_align_to(label, logo, LV_ALIGN_OUT_RIGHT_TOP, 10, 0);
-//
-//        label = lv_label_create(tab_bar);
-//        lv_label_set_text(label, "Widgets demo");
-//        lv_obj_add_flag(label, LV_OBJ_FLAG_IGNORE_LAYOUT);
-//        lv_obj_add_style(label, &style_text_muted, 0);
-//        lv_obj_align_to(label, logo, LV_ALIGN_OUT_RIGHT_BOTTOM, 10, 0);
-//    }
-//
-//    analytics_create(t2);
-//    shop_create(t3);
-
-    //color_changer_create(tv);
+    lv_timer_create(leds_timer_cb, 15, NULL);
 }
 
 //
 // Widget creators
 //
-static void pattern_create(lv_obj_t * parent, pattern_type_t type, const char * name, const char * desc)
+
+// A pattern descriptor widget
+static lv_obj_t* pattern_widget_create(lv_obj_t* parent, pattern_type_t type, const char* name, const char* desc)
 {
     // If we exhausted the max number of patterns, just bail out
     if (pattern_count >= MAX_PATTERNS) {
-        return;
+        return NULL;
     }
 
     // The top button widget
@@ -206,7 +182,13 @@ static void pattern_create(lv_obj_t * parent, pattern_type_t type, const char * 
     lv_obj_add_style(btn_w, &style_list_button, 0);    
     lv_obj_set_height(btn_w, LV_SIZE_CONTENT);
     lv_obj_set_width(btn_w, LV_PCT(97));
-    static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, 1, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+    static int32_t grid_col_dsc[LED_WIDGET_COUNT + 3];
+    for (int i = 0; i < LED_WIDGET_COUNT; i++) {
+        grid_col_dsc[i] = LV_GRID_CONTENT;
+    }
+    grid_col_dsc[LED_WIDGET_COUNT] = 10;
+    grid_col_dsc[LED_WIDGET_COUNT + 1] = LV_GRID_FR(1);
+    grid_col_dsc[LED_WIDGET_COUNT + 2] = LV_GRID_TEMPLATE_LAST;
     static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
     lv_obj_set_grid_dsc_array(btn_w, grid_col_dsc, grid_row_dsc);
 
@@ -214,24 +196,15 @@ static void pattern_create(lv_obj_t * parent, pattern_type_t type, const char * 
     lv_obj_t * name_w = lv_label_create(btn_w);
     lv_label_set_text(name_w, name);
     lv_obj_add_style(name_w, &style_title, 0);
-    lv_obj_set_grid_cell(name_w, LV_GRID_ALIGN_START, 0, 3, LV_GRID_ALIGN_START, 0, 1);
+    lv_obj_set_grid_cell(name_w, LV_GRID_ALIGN_START, 0, LED_WIDGET_COUNT + 2, LV_GRID_ALIGN_START, 0, 1);
     
     // The leds
-    lv_obj_t * led_w[4];
+    lv_obj_t * led_w[LED_WIDGET_COUNT];
     leds[pattern_count].type = type;
-    for (int i = 0; i < 4; i++) {
-        led_w[i] = lv_obj_create(btn_w);
-        lv_obj_set_height(led_w[i], 25);
-        lv_obj_set_width(led_w[i], 25);
-        lv_obj_set_style_pad_all(led_w[i], 0, 0);
-        lv_obj_set_style_shadow_color(led_w[i], lv_color_hex(0xFF0000), 0);
-        lv_obj_set_style_shadow_opa(led_w[i], LV_OPA_50, 0);
-        lv_obj_set_style_shadow_width(led_w[i], 10, 0);
-        lv_obj_set_style_shadow_spread(led_w[i], 3, 0);
-        lv_obj_set_style_border_width(led_w[i], 0, 0);
-        lv_obj_set_style_radius(led_w[i], 10, 0);
-        lv_obj_align(led_w[i], LV_ALIGN_CENTER, 0, 0);
-        lv_obj_set_grid_cell(led_w[i], LV_GRID_ALIGN_START, i, 1, LV_GRID_ALIGN_CENTER, 1, 1);
+    for (int i = 0; i < LED_WIDGET_COUNT; i++) {
+        led_w[i] = led_widget(btn_w, 10);
+        lv_obj_align(led_w[i], LV_ALIGN_BOTTOM_LEFT, 0, 0);
+        lv_obj_set_grid_cell(led_w[i], LV_GRID_ALIGN_START, i, 1, LV_GRID_ALIGN_END, 1, 1);
         leds[pattern_count].leds[i] = led_w[i];
     }
 
@@ -239,83 +212,47 @@ static void pattern_create(lv_obj_t * parent, pattern_type_t type, const char * 
     lv_obj_t * desc_w = lv_label_create(btn_w);
     lv_obj_add_style(desc_w, &style_text_muted, 0);
     lv_label_set_text(desc_w, desc);
-    //lv_obj_set_width(desc_w, LV_PCT(70));
-    lv_obj_set_grid_cell(desc_w, LV_GRID_ALIGN_STRETCH, 4, 1, LV_GRID_ALIGN_CENTER, 0, 2);
+    lv_obj_set_grid_cell(desc_w, LV_GRID_ALIGN_STRETCH, LED_WIDGET_COUNT + 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
     lv_label_set_long_mode(desc_w, LV_LABEL_LONG_WRAP);
 
 
     pattern_count++;
 
-    // Layout
-//LV_SYMBOL_ENVELOPE        static int32_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-//        static int32_t grid_main_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
-//
-//        /*Create the top panel*/
-//        static int32_t grid_1_col_dsc[] = {LV_GRID_CONTENT, 1, LV_GRID_CONTENT, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-//        static int32_t grid_1_row_dsc[] = {
-//            LV_GRID_CONTENT, /*Name*/
-//            LV_GRID_CONTENT, /*Description*/
-//            LV_GRID_CONTENT, /*Email*/
-//            -20,
-//            LV_GRID_CONTENT, /*Phone*/
-//            LV_GRID_CONTENT, /*Buttons*/
-//            LV_GRID_TEMPLATE_LAST
-//        };
-//
-//        static int32_t grid_2_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-//        static int32_t grid_2_row_dsc[] = {
-//            LV_GRID_CONTENT,  /*Title*/
-//            5,                /*Separator*/
-//            LV_GRID_CONTENT,  /*Box title*/
-//            40,               /*Box*/
-//            LV_GRID_CONTENT,  /*Box title*/
-//            40,               /*Box*/
-//            LV_GRID_CONTENT,  /*Box title*/
-//            40,               /*Box*/
-//            LV_GRID_CONTENT,  /*Box title*/
-//            40,               /*Box*/
-//            LV_GRID_TEMPLATE_LAST
-//        };
-//
-//        lv_obj_set_grid_dsc_array(parent, grid_main_col_dsc, grid_main_row_dsc);
-//        lv_obj_set_grid_cell(panel1, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
-//
-//        lv_obj_set_width(log_out_btn, 120);
-//        lv_obj_set_width(invite_btn, 120);
-//
-//        lv_obj_set_grid_dsc_array(panel1, grid_1_col_dsc, grid_1_row_dsc);
-//        lv_obj_set_grid_cell(avatar, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 0, 4);
-//        lv_obj_set_grid_cell(name, LV_GRID_ALIGN_START, 2, 2, LV_GRID_ALIGN_CENTER, 0, 1);
-//        lv_obj_set_grid_cell(dsc, LV_GRID_ALIGN_STRETCH, 2, 2, LV_GRID_ALIGN_START, 1, 1);
-//        lv_obj_set_grid_cell(email_label, LV_GRID_ALIGN_START, 3, 1, LV_GRID_ALIGN_CENTER, 2, 1);
-//        lv_obj_set_grid_cell(email_icn, LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 2, 1);
-//        lv_obj_set_grid_cell(call_icn, LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 4, 1);
-//        lv_obj_set_grid_cell(call_label, LV_GRID_ALIGN_START, 3, 1, LV_GRID_ALIGN_CENTER, 4, 1);
-//        lv_obj_set_grid_cell(log_out_btn, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 5, 1);
-//        lv_obj_set_grid_cell(invite_btn, LV_GRID_ALIGN_END, 3, 1, LV_GRID_ALIGN_CENTER, 5, 1);
-//
-//        lv_obj_set_grid_cell(panel2, LV_GRID_ALIGN_STRETCH, 0, 1, LV_GRID_ALIGN_START, 1, 1);
-//        lv_obj_set_grid_dsc_array(panel2, grid_2_col_dsc, grid_2_row_dsc);
-//        lv_obj_set_grid_cell(panel2_title, LV_GRID_ALIGN_START, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
-//        lv_obj_set_grid_cell(user_name_label, LV_GRID_ALIGN_START, 0, 2, LV_GRID_ALIGN_START, 2, 1);
-//        lv_obj_set_grid_cell(user_name, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_START, 3, 1);
-//        lv_obj_set_grid_cell(password_label, LV_GRID_ALIGN_START, 0, 2, LV_GRID_ALIGN_START, 4, 1);
-//        lv_obj_set_grid_cell(password, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_START, 5, 1);
-//        lv_obj_set_grid_cell(birthday_label, LV_GRID_ALIGN_START, 0, 2, LV_GRID_ALIGN_START, 6, 1);
-//        lv_obj_set_grid_cell(birthdate, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_START, 7, 1);
-//        lv_obj_set_grid_cell(gender_label, LV_GRID_ALIGN_START, 0, 2, LV_GRID_ALIGN_START, 8, 1);
-//        lv_obj_set_grid_cell(gender, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_START, 9, 1);
-//
-//        lv_obj_set_grid_cell(panel3, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_STRETCH, 1, 1);
-//        lv_obj_set_grid_dsc_array(panel3, grid_2_col_dsc, grid_2_row_dsc);
-//        lv_obj_set_grid_cell(panel3_title, LV_GRID_ALIGN_START, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
-//        lv_obj_set_grid_cell(slider1, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 3, 1);
-//        lv_obj_set_grid_cell(experience_label, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 2, 1);
-//        lv_obj_set_grid_cell(hard_working_label, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 4, 1);
-//        lv_obj_set_grid_cell(sw2, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 5, 1);
-//        lv_obj_set_grid_cell(team_player_label, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 6, 1);
-//        lv_obj_set_grid_cell(sw1, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 7, 1);
+    return btn_w;
 }
+
+// An LED looking widget
+static lv_obj_t* led_widget(lv_obj_t* parent, int size)
+{
+    // The lvgl LED object has very non-linear way to control the brightness
+    // and halo around the widget. So instead we make our own using similar idea
+    // (a simple widget with a variable shadow)
+    lv_obj_t* led = lv_obj_create(parent);
+    lv_obj_set_height(led, size);
+    lv_obj_set_width(led, size);
+    lv_obj_set_style_pad_all(led, 0, 0);
+    lv_obj_set_style_radius(led, size * 2 / 5, 0);
+    lv_obj_set_style_border_width(led, 0, 0);
+    lv_obj_set_style_shadow_spread(led, size / 8, 0);
+    lv_obj_set_style_shadow_width(led, size / 2, 0);
+    lv_obj_set_style_bg_opa(led, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_main_opa(led, LV_OPA_COVER, 0);
+    led_set_color(led, lv_color_hex(0x000000));
+
+    return led;
+}
+
+static void led_set_color(lv_obj_t * led, lv_color_t color)
+{
+    // Figure out the overall brightness of the color
+    uint32_t brightness = (color.red + color.green + color.blue);
+    brightness = brightness > 255 ? 255 : brightness; 
+    uint32_t shadow_opacity = brightness < 128 ? 0 : (brightness - 128) * 2;
+    lv_obj_set_style_bg_color(led, color, 0);
+    lv_obj_set_style_shadow_color(led, color, 0);
+    lv_obj_set_style_shadow_opa(led, shadow_opacity, 0);
+}
+
 
 //
 // Callbacks
@@ -326,12 +263,13 @@ static void leds_timer_cb(lv_timer_t * timer)
     LV_UNUSED(timer);
 
     uint32_t t = millis();
+    uint32_t period = 750;
 
     for (int i = 0; i < pattern_count; i++) {
         led_t * led = &leds[i];
-        for (int j = 0; j < 4; j++) {
+        for (int j = 0; j < LED_WIDGET_COUNT; j++) {
             uint32_t bright = 0;
-            uint32_t phase = ((t % 2000) * 256 / 2000 + j * 256 / 4) % 256;
+            uint32_t phase = ((t % period) * 256 / period + j * 256 / LED_WIDGET_COUNT) % 256;
             switch (led->type) {
                 case PATTERN_FADE:
                     bright = phase < 128 ? phase * 2 : 255 - (phase - 128) * 2;
@@ -340,12 +278,8 @@ static void leds_timer_cb(lv_timer_t * timer)
                     bright = phase < 128 ? 255 : 0;
                     break;
             }
-            lv_color_t color = lv_color_mix(lv_color_hex(0xFF0000), lv_color_black(), bright < 128 ? bright * 2 : 255);
-        
-            uint32_t opacity = bright < 128 ? 0 : (bright - 128) * 2;
-            lv_obj_set_style_shadow_opa(led->leds[j], opacity, 0);
-            lv_obj_set_style_bg_color(led->leds[j], color, 0);
-            lv_obj_set_style_shadow_color(led->leds[j], color, 0);
+            lv_color_t color = lv_color_mix(lv_palette_main(LV_PALETTE_RED), lv_color_black(), bright <= 255 ? bright : 255);
+            led_set_color(led->leds[j], color);
         }
     }
 }
