@@ -1,29 +1,19 @@
 #include "led_tester_ui.h"
 #include "color_selector.h"
 #include "led_bar.h"
+#include "led_pattern.h"
+#include "led_palette.h"
 #include <Arduino.h>
-
-//
-// Constants
-//
-// The maximum number of patterns we can show
-static const int MAX_PATTERNS = 64;
+#include <FastLED.h>
 
 //
 // Typedefs
 //
-typedef enum {
-    PATTERN_FADE,
-    PATTERN_BLINK,
-} pattern_type_t;
-
 //
 // Static prototypes
 //
-static lv_obj_t* pattern_widget_create(lv_obj_t* parent, pattern_type_t type, const char* title, const char* desc);
-static lv_obj_t* led_widget(lv_obj_t* parent, int size);
-static void led_set_color(lv_obj_t* led, lv_color_t color);
-static void leds_timer_cb(lv_timer_t* timer);
+static lv_obj_t* pattern_widget_create(lv_obj_t* parent, led_pattern_t* patttern);
+static lv_obj_t* palette_widget_create(lv_obj_t* parent, led_palette_t* palette);
 
 //
 // Static variables
@@ -38,9 +28,6 @@ static lv_style_t style_list;
 static lv_style_t style_list_button;
 // Tab views
 static lv_obj_t * tv;
-// The LEDs that we can control on a pattern
-static int pattern_count = 0;
-//static led_t leds[MAX_PATTERNS];
 
 //
 // Global functions
@@ -84,27 +71,31 @@ void led_tester_ui(void)
     lv_obj_t* t1_w = lv_tabview_add_tab(tv, pattern_str.c_str());
     lv_obj_set_flex_flow(t1_w, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_style(t1_w, &style_list, 0);
-    pattern_widget_create(t1_w, PATTERN_FADE, "Fade", "Fade in and out and do plenty of stuff and this should now wrap");
-    pattern_widget_create(t1_w, PATTERN_BLINK, "Blink", "Blink on and off");
-    pattern_widget_create(t1_w, PATTERN_FADE, "Fade", "Fade in and out");
-    pattern_widget_create(t1_w, PATTERN_BLINK, "Blink", "Blink on and off");
+    for (uint32_t i = 0; i < num_led_patterns(); i++) {
+        led_pattern_t* pattern = &led_patterns[i];
+        pattern_widget_create(t1_w, pattern);
+    }
 
-   // Second tab: colors
+    // Second tab: colors
     String color_str = String(LV_SYMBOL_TINT) + " Color";
     lv_obj_t* t2_w = lv_tabview_add_tab(tv, color_str.c_str());
     lv_obj_set_flex_flow(t2_w, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_style(t2_w, &style_list, 0);
-    lv_obj_t* color_selector_w = color_selector_create(t2_w);
-    lv_obj_add_style(color_selector_w, &style_list_button, 0);    
-    lv_obj_set_height(color_selector_w, LV_SIZE_CONTENT);
-    lv_obj_set_width(color_selector_w, LV_PCT(97));
+    for (uint32_t i = 0; i < num_led_palettes(); i++) {
+        palette_widget_create(t2_w, &led_palettes[i]);
+    }
+
+    //lv_obj_t* color_selector_w = color_selector_create(t2_w);
+    //lv_obj_add_style(color_selector_w, &style_list_button, 0);    
+    //lv_obj_set_height(color_selector_w, LV_SIZE_CONTENT);
+    //lv_obj_set_width(color_selector_w, LV_PCT(97));
 
     // third tab: system
     String system_str = String(LV_SYMBOL_POWER) + " System";
     lv_obj_t* t3_w = lv_tabview_add_tab(tv, system_str.c_str());
     lv_obj_set_flex_flow(t3_w, LV_FLEX_FLOW_COLUMN);
-    lv_obj_t* led_bar_w = led_bar_create(t3_w, 16);
-    lv_obj_set_width(led_bar_w, LV_PCT(97));
+    //lv_obj_t* led_bar_w = led_bar_create(t3_w, 16, NULL);
+    //lv_obj_set_width(led_bar_w, LV_PCT(97));
 
     // fourth tab: options
     String options_str = String(LV_SYMBOL_SETTINGS) + " Params";
@@ -113,8 +104,6 @@ void led_tester_ui(void)
 
 
 
-    // Create a timer for the LED patterns
-    lv_timer_create(leds_timer_cb, 15, NULL);
 }
 
 //
@@ -122,13 +111,8 @@ void led_tester_ui(void)
 //
 
 // A pattern descriptor widget
-static lv_obj_t* pattern_widget_create(lv_obj_t* parent, pattern_type_t type, const char* name, const char* desc)
+static lv_obj_t* pattern_widget_create(lv_obj_t* parent, led_pattern_t* pattern)
 {
-    // If we exhausted the max number of patterns, just bail out
-    if (pattern_count >= MAX_PATTERNS) {
-        return NULL;
-    }
-
     // The top button widget
     lv_obj_t * btn_w = lv_btn_create(parent);
     lv_obj_add_style(btn_w, &style_list_button, 0);    
@@ -140,57 +124,54 @@ static lv_obj_t* pattern_widget_create(lv_obj_t* parent, pattern_type_t type, co
 
     // The name at the top
     lv_obj_t * name_w = lv_label_create(btn_w);
-    lv_label_set_text(name_w, name);
+    lv_label_set_text(name_w, pattern->name);
     lv_obj_add_style(name_w, &style_title, 0);
     lv_obj_set_grid_cell(name_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 0, 1);
     
     // The led bar
-    lv_obj_t * led_bar_w = led_bar_create(btn_w, 12);
+    lv_obj_t * led_bar_w = led_bar_create(btn_w, 16, pattern, current_palette(), 1000);
     lv_obj_set_width(led_bar_w, LV_PCT(100));
     lv_obj_set_grid_cell(led_bar_w, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_END, 1, 1);
 
     // The description
     lv_obj_t * desc_w = lv_label_create(btn_w);
     lv_obj_add_style(desc_w, &style_text_muted, 0);
-    lv_label_set_text(desc_w, desc);
+    lv_label_set_text(desc_w, pattern->desc);
     lv_obj_set_grid_cell(desc_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
     lv_label_set_long_mode(desc_w, LV_LABEL_LONG_WRAP);
-
-
-    pattern_count++;
 
     return btn_w;
 }
 
-//
-// Private callbacks
-//
-static void leds_timer_cb(lv_timer_t * timer)
+// A palette descriptor widget
+static lv_obj_t* palette_widget_create(lv_obj_t* parent, led_palette_t* palette)
 {
-    LV_UNUSED(timer);
+    // The top button widget
+    lv_obj_t * btn_w = lv_btn_create(parent);
+    lv_obj_add_style(btn_w, &style_list_button, 0);    
+    lv_obj_set_height(btn_w, LV_SIZE_CONTENT);
+    lv_obj_set_width(btn_w, LV_PCT(97));
+    static int32_t grid_col_dsc[] = {LV_GRID_FR(30), LV_GRID_FR(70), LV_GRID_TEMPLATE_LAST};
+    static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
+    lv_obj_set_grid_dsc_array(btn_w, grid_col_dsc, grid_row_dsc);
 
-    #if 0
+    // The name at the top
+    lv_obj_t * name_w = lv_label_create(btn_w);
+    lv_label_set_text(name_w, palette->name);
+    lv_obj_add_style(name_w, &style_title, 0);
+    lv_obj_set_grid_cell(name_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 0, 1);
+    
+    // The led bar
+    lv_obj_t * led_bar_w = led_bar_create(btn_w, 16, current_pattern(), &palette->palette, 1000);
+    lv_obj_set_width(led_bar_w, LV_PCT(100));
+    lv_obj_set_grid_cell(led_bar_w, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_END, 1, 1);
 
-    return;
-    uint32_t t = millis();
-    uint32_t period = 750;
+    // The description
+    lv_obj_t * desc_w = lv_label_create(btn_w);
+    lv_obj_add_style(desc_w, &style_text_muted, 0);
+    lv_label_set_text(desc_w, palette->desc);
+    lv_obj_set_grid_cell(desc_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
+    lv_label_set_long_mode(desc_w, LV_LABEL_LONG_WRAP);
 
-    for (int i = 0; i < pattern_count; i++) {
-        led_t * led = &leds[i];
-        for (int j = 0; j < LED_WIDGET_COUNT; j++) {
-            uint32_t bright = 0;
-            uint32_t phase = ((t % period) * 256 / period + j * 256 / LED_WIDGET_COUNT) % 256;
-            switch (led->type) {
-                case PATTERN_FADE:
-                    bright = phase < 128 ? phase * 2 : 255 - (phase - 128) * 2;
-                    break;
-                case PATTERN_BLINK:
-                    bright = phase < 128 ? 255 : 0;
-                    break;
-            }
-            lv_color_t color = lv_color_mix(lv_palette_main(LV_PALETTE_RED), lv_color_black(), bright <= 255 ? bright : 255);
-            led_set_color(led->leds[j], color);
-        }
-    }
-    #endif
+    return btn_w;
 }
