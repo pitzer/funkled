@@ -11,6 +11,12 @@
 /**********************
  * GLOBAL PROTOTYPES
  **********************/
-lv_obj_t* led_bar_create(lv_obj_t* parent, uint32_t num_leds, led_pattern_t* pattern, const CRGBPalette16* palette, uint32_t period_ms);
+lv_obj_t* led_bar_create(
+    lv_obj_t* parent,
+    uint32_t num_leds,
+    const led_pattern_func_t pattern_update,
+    const CRGBPalette16* palette,
+    uint32_t period_ms
+);
 
 #endif /*LV_led_bar_H*/

@@ -13,7 +13,7 @@ led_palette_t led_palettes[] = {
         .palette = RainbowColors_p,
     },
     {
-        .name = "Rainbow",
+        .name = "Rainbow Stripe",
         .desc = "Colors of the rainbow with a stripe moving across.",
         .palette = RainbowStripeColors_p,
     },

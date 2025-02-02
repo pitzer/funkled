@@ -11,13 +11,13 @@ typedef struct {
     int32_t* grid_col_dsc;
     // The FastLED LED array
     CRGB* leds;
-    // The pattern to use for the LEDs
-    led_pattern_t* pattern;
+    // The pattern update function to use for the LEDs
+    led_pattern_func_t pattern_update;
     // The palette to use for the LEDs
     const CRGBPalette16* palette;
     // The number of LEDs in the array
     uint32_t num_leds;
-    // The period of the pattern
+    // The pCRGBPalette32pattern
     uint32_t period_ms;
 } led_bar_data_t;
 
@@ -33,7 +33,7 @@ static void led_set_color(lv_obj_t * led, lv_color_t color);
 //
 // Global functions
 //
-lv_obj_t* led_bar_create(lv_obj_t* parent, uint32_t num_leds, led_pattern_t* pattern, const CRGBPalette16* palette, uint32_t period_ms) {
+lv_obj_t* led_bar_create(lv_obj_t* parent, uint32_t num_leds, const led_pattern_func_t pattern_update, const CRGBPalette16* palette, uint32_t period_ms) {
     lv_obj_t* led_bar_w = lv_obj_create(parent);
     // The grid descriptor arrays do not get copied by the lvgl library, so
     // they cannot be static or locally scoped.
@@ -60,7 +60,7 @@ lv_obj_t* led_bar_create(lv_obj_t* parent, uint32_t num_leds, led_pattern_t* pat
     led_bar_data_t* led_data = new led_bar_data_t;
     led_data->grid_col_dsc = grid_col_dsc;
     led_data->period_ms = period_ms;
-    led_data->pattern = pattern;
+    led_data->pattern_update = pattern_update;
     led_data->palette = palette;
     led_data->num_leds = num_leds;
     led_data->leds = new CRGB[num_leds];
@@ -128,7 +128,7 @@ static void led_bar_timer_cb(lv_timer_t * timer)
 
     // Fill the LED array with the pattern
     uint32_t time_ms = millis();
-    led_bar_data->pattern->update(time_ms, led_bar_data->period_ms, led_bar_data->palette, led_bar_data->num_leds, led_bar_data->leds);
+    led_bar_data->pattern_update(time_ms, led_bar_data->period_ms, led_bar_data->palette, led_bar_data->num_leds, led_bar_data->leds);
 
     // Update the LEDs
     for (uint32_t i = 0; i < led_bar_data->num_leds; i++) {
