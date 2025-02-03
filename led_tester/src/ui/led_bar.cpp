@@ -1,4 +1,6 @@
 #include "led_bar.h"
+#include "led_pattern.h"
+#include "led_palette.h"
 #include <Arduino.h>
 
 //
@@ -47,7 +49,7 @@ lv_obj_t* led_bar_create(lv_obj_t* parent, uint32_t num_leds, const led_pattern_
     static const int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
     lv_obj_set_grid_dsc_array(led_bar_w, grid_col_dsc, grid_row_dsc);
     for (uint32_t i = 0; i < num_leds; i++) {
-        lv_obj_t* led_w = led_widget_create(led_bar_w, 10);
+        lv_obj_t* led_w = led_widget_create(led_bar_w, 15);
         lv_obj_set_grid_cell(led_w, LV_GRID_ALIGN_STRETCH, i, 1, LV_GRID_ALIGN_END, 0, 1);
     }
     lv_obj_set_height(led_bar_w, LV_SIZE_CONTENT);
@@ -55,6 +57,7 @@ lv_obj_t* led_bar_create(lv_obj_t* parent, uint32_t num_leds, const led_pattern_
     lv_obj_set_style_border_opa(led_bar_w, LV_OPA_0, 0);
     lv_obj_set_style_pad_gap(led_bar_w, 3, 0);
     lv_obj_set_style_pad_all(led_bar_w, 1, 0);
+    lv_obj_clear_flag(led_bar_w, LV_OBJ_FLAG_CLICKABLE);
 
     // Create a struct with all the internal data
     led_bar_data_t* led_data = new led_bar_data_t;
@@ -83,19 +86,20 @@ static lv_obj_t* led_widget_create(lv_obj_t* parent, int size)
     // The lvgl LED object has very non-linear way to control the brightness
     // and halo around the widget. So instead we make our own using similar idea
     // (a simple widget with a variable shadow)
-    lv_obj_t* led = lv_obj_create(parent);
-    lv_obj_set_height(led, size);
-    lv_obj_set_width(led, size);
-    lv_obj_set_style_pad_all(led, 0, 0);
-    lv_obj_set_style_radius(led, size * 2 / 5, 0);
-    lv_obj_set_style_border_width(led, 0, 0);
-    lv_obj_set_style_shadow_spread(led, size / 8, 0);
-    lv_obj_set_style_shadow_width(led, size / 2, 0);
-    lv_obj_set_style_bg_opa(led, LV_OPA_COVER, 0);
-    lv_obj_set_style_bg_main_opa(led, LV_OPA_COVER, 0);
-    led_set_color(led, lv_color_hex(0x000000));
+    lv_obj_t* led_w = lv_obj_create(parent);
+    lv_obj_set_height(led_w, size);
+    lv_obj_set_width(led_w, size);
+    lv_obj_set_style_pad_all(led_w, 0, 0);
+    lv_obj_set_style_radius(led_w, size * 2 / 5, 0);
+    lv_obj_set_style_border_width(led_w, 0, 0);
+    lv_obj_set_style_shadow_spread(led_w, 2, 0);
+    lv_obj_set_style_shadow_width(led_w, 5, 0);
+    lv_obj_set_style_bg_opa(led_w, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_main_opa(led_w, LV_OPA_COVER, 0);
+    led_set_color(led_w, lv_color_hex(0x000000));
+    lv_obj_clear_flag(led_w, LV_OBJ_FLAG_CLICKABLE);
 
-    return led;
+    return led_w;
 }
 
 static void led_set_color(lv_obj_t * led, lv_color_t color)
@@ -127,8 +131,18 @@ static void led_bar_timer_cb(lv_timer_t * timer)
     led_bar_data_t* led_bar_data = (led_bar_data_t*) lv_obj_get_user_data(led_bar_w);
 
     // Fill the LED array with the pattern
+    // If any of the pattern or palette functions are NULL, use the current one
+    const CRGBPalette16* palette = led_bar_data->palette;
+    if (palette == NULL) {
+        palette = current_palette();
+    }
+    led_pattern_func_t pattern_update = led_bar_data->pattern_update;
+    if (pattern_update == NULL) {
+        pattern_update = current_pattern()->update;
+    }
+
     uint32_t time_ms = millis();
-    led_bar_data->pattern_update(time_ms, led_bar_data->period_ms, led_bar_data->palette, led_bar_data->num_leds, led_bar_data->leds);
+    pattern_update(time_ms, led_bar_data->period_ms, palette, led_bar_data->num_leds, led_bar_data->leds);
 
     // Update the LEDs
     for (uint32_t i = 0; i < led_bar_data->num_leds; i++) {

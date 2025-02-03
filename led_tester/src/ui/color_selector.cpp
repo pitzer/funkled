@@ -21,12 +21,14 @@ lv_obj_t* color_selector_create(lv_obj_t* parent) {
     static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, 7, LV_GRID_FR(1), 7, LV_GRID_TEMPLATE_LAST};
     static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
     lv_obj_set_grid_dsc_array(color_selector_w, grid_col_dsc, grid_row_dsc);
+    lv_obj_add_flag(color_selector_w, LV_OBJ_FLAG_EVENT_BUBBLE);
     // The color wheel
     LV_IMAGE_DECLARE(img_colorwheel); 
     lv_obj_t* image_w = lv_image_create(color_selector_w);
     lv_image_set_src(image_w, &img_colorwheel);
     lv_obj_set_grid_cell(image_w, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 0, 4);
     lv_obj_add_event_cb(color_selector_w, colorwheel_pressed_cb, LV_EVENT_PRESSING, color_selector_w);
+    lv_obj_add_flag(image_w, LV_OBJ_FLAG_EVENT_BUBBLE);
     // The color patch
     lv_obj_t* patch_w = lv_obj_create(color_selector_w);
     lv_obj_t* patch_label_w = lv_label_create(patch_w);
@@ -36,6 +38,7 @@ lv_obj_t* color_selector_create(lv_obj_t* parent) {
     lv_obj_set_height(patch_w, 40);
     lv_obj_set_style_radius(patch_w, 10, 0);
     lv_obj_set_grid_cell(patch_w, LV_GRID_ALIGN_STRETCH, 1, 3, LV_GRID_ALIGN_CENTER, 0, 1);
+    lv_obj_clear_flag(patch_w, LV_OBJ_FLAG_CLICKABLE);
     // The three sliders
     lv_obj_t* red_slider_w = slider_create(color_selector_w, lv_color_hex(0xFF0000));
     lv_obj_set_grid_cell(red_slider_w, LV_GRID_ALIGN_STRETCH, 2, 1, LV_GRID_ALIGN_CENTER, 1, 1);
@@ -44,7 +47,7 @@ lv_obj_t* color_selector_create(lv_obj_t* parent) {
     lv_obj_t* blue_slider_w = slider_create(color_selector_w, lv_color_hex(0x0000FF));
     lv_obj_set_grid_cell(blue_slider_w, LV_GRID_ALIGN_STRETCH, 2, 1, LV_GRID_ALIGN_CENTER, 3, 1);
     // Initial color set
-    change_color(color_selector_w, lv_color_hex(0xFF0000));
+    change_color(color_selector_w, lv_color_hex(0xFFFFFF));
 
     return color_selector_w;
 }
@@ -137,5 +140,6 @@ static lv_obj_t* slider_create(lv_obj_t* parent, lv_color_t color) {
     lv_slider_set_range(slider_w, 0, 255);
     lv_slider_set_value(slider_w, 0, LV_ANIM_OFF);
     lv_obj_add_event_cb(slider_w, slider_pressed_cb, LV_EVENT_PRESSING, parent);
+    lv_obj_add_flag(slider_w, LV_OBJ_FLAG_EVENT_BUBBLE);
     return slider_w;
 }
