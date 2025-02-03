@@ -21,6 +21,7 @@ static lv_obj_t* list_item_widget_create(
 );
 static void pattern_clicked_cb(lv_event_t* e);
 static void palette_clicked_cb(lv_event_t* e);
+static void channel_clicked_cb(lv_event_t* e);
 
 //
 // Static variables
@@ -97,7 +98,7 @@ void led_tester_ui(void)
             NULL,
             NULL,
             false);
-        //lv_obj_add_event_cb(channel_w, channel_clicked_cb, LV_EVENT_CLICKED, (void*) i);
+        lv_obj_add_event_cb(channel_w, channel_clicked_cb, LV_EVENT_CLICKED, (void*) i);
     }
 
 
@@ -170,10 +171,17 @@ static lv_obj_t* list_item_widget_create(
     // The top button widget
     lv_obj_t * btn_w = lv_btn_create(parent);
     lv_obj_add_style(btn_w, &style_list_button, LV_STATE_DEFAULT);
-    lv_obj_add_style(btn_w, &style_list_button_checked, LV_STATE_CHECKED); 
-    static int32_t grid_col_dsc[] = {LV_GRID_FR(35), LV_GRID_FR(65), LV_GRID_TEMPLATE_LAST};
-    static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
-    lv_obj_set_grid_dsc_array(btn_w, grid_col_dsc, grid_row_dsc);
+    lv_obj_add_style(btn_w, &style_list_button_checked, LV_STATE_CHECKED);
+    // Different layouts if the description is present or not
+    if (desc) {
+        static int32_t grid_col_dsc[] = {LV_GRID_FR(35), LV_GRID_FR(65), LV_GRID_TEMPLATE_LAST};
+        static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
+        lv_obj_set_grid_dsc_array(btn_w, grid_col_dsc, grid_row_dsc);
+    } else {
+        static int32_t grid_col_dsc[] = {15, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+        static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
+        lv_obj_set_grid_dsc_array(btn_w, grid_col_dsc, grid_row_dsc);
+    }
 
     // The name at the top
     lv_obj_t * name_w = lv_label_create(btn_w);
@@ -183,7 +191,7 @@ static lv_obj_t* list_item_widget_create(
     lv_label_set_long_mode(name_w, LV_LABEL_LONG_WRAP);
     
     // The description
-    if (desc != NULL) {
+    if (desc) {
         lv_obj_t* desc_w = lv_label_create(btn_w);
         lv_obj_add_style(desc_w, &style_text_muted, 0);
         lv_label_set_text(desc_w, desc);
@@ -205,7 +213,11 @@ static lv_obj_t* list_item_widget_create(
         last_panel_w = led_bar_create(btn_w, 16, channel, pattern_update, palette, 3000);
     }
     lv_obj_set_width(last_panel_w, LV_PCT(100));
-    lv_obj_set_grid_cell(last_panel_w, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_END, 1, 1);
+    if (desc) {
+        lv_obj_set_grid_cell(last_panel_w, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_END, 1, 1);
+    } else {
+        lv_obj_set_grid_cell(last_panel_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_END, 0, 1);
+    }
 
     return btn_w;
 }
@@ -250,4 +262,24 @@ static void palette_clicked_cb(lv_event_t* e) {
         led_palettes[palette_index].palette = CRGBPalette16(color_crgb);
     }
 
+}
+
+static void channel_clicked_cb(lv_event_t* e) {
+    // Get the new channel index
+    uint32_t channel = (uint32_t) lv_event_get_user_data(e);
+    current_channel = channel;
+    // Unclick all the other buttons
+    for (uint32_t i = 0; i < lv_obj_get_child_count(tab_channel_w); i++) {
+        lv_obj_t* btn_w = lv_obj_get_child(tab_channel_w, i);
+        if (i != channel) {
+            lv_obj_clear_state(btn_w, LV_STATE_CHECKED);
+        } else {
+            lv_obj_add_state(btn_w, LV_STATE_CHECKED);
+        }
+    }
+    // Update the pattern and palette buttons
+    lv_obj_t* pattern_w = lv_obj_get_child(tab_pattern_w, led_strings[channel].pattern_index);
+    lv_obj_t* palette_w = lv_obj_get_child(tab_color_w, led_strings[channel].palette_index);
+    lv_obj_send_event(pattern_w, LV_EVENT_CLICKED, NULL);
+    lv_obj_send_event(palette_w, LV_EVENT_CLICKED, NULL);
 }
