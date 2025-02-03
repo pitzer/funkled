@@ -19,13 +19,5 @@ extern led_palette_t led_palettes[];
 // Number of palettes available
 extern uint32_t num_led_palettes();
 
-// The current palette index
-extern uint32_t palette_index;
-
-// Get the current palette
-inline CRGBPalette16* current_palette() {
-    return &led_palettes[palette_index].palette;
-}
-
 #endif // LED_PALETTE_H
 

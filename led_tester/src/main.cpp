@@ -1,8 +1,11 @@
+#include "led_array.h"
 #include <Arduino.h>
 #include <lvgl.h>
 #include "ui/led_tester_ui.h"
 #include <TFT_eSPI.h>
 #include <FT6336U.h>
+#include <OctoWS2811.h>
+
 
 // Touchscreen
 #define TOUCH_RST_PIN 37
@@ -10,6 +13,16 @@
 #define TOUCH_SCL_PIN 19
 #define TOUCH_SDA_PIN 18
 FT6336U ft6336u(TOUCH_SDA_PIN, TOUCH_SCL_PIN, TOUCH_RST_PIN, TOUCH_INT_PIN);
+
+// LEDs
+#define LED_REFRESH_RATE_HZ 20
+const uint8_t pin_list [] = { 28, 24, 15, 7, 5, 3, 2, 1, 25, 14, 8, 6, 4, 22, 23,  0};
+const uint32_t bytes_per_led = 3;
+DMAMEM uint8_t display_memory[max_leds * bytes_per_led];
+uint8_t drawing_memory[max_leds * bytes_per_led];
+// OctoWS2811 can do its own RGB reordering, but it may be different for each strip, so we do it ourselves.
+const uint8_t config = WS2811_RGB | WS2811_800kHz;
+OctoWS2811 leds(max_leds_per_channel, display_memory, drawing_memory, config, num_led_channels, pin_list);
 
 
 // Screen resolution and rotation
@@ -32,10 +45,11 @@ FT6336U ft6336u(TOUCH_SDA_PIN, TOUCH_SCL_PIN, TOUCH_RST_PIN, TOUCH_INT_PIN);
 #define DRAW_BUF_SIZE (TFT_HOR_RES * TFT_VER_RES / 10)
 static lv_color_t draw_buf[DRAW_BUF_SIZE];
 
-// Function declarations
+// Function prototypes
 static uint32_t lv_tick(void);
 static void lv_print( lv_log_level_t level, const char * buf );
 static void lv_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data );
+static void led_refresh_cb(lv_timer_t * timer);
 
 //
 // The main setup function
@@ -75,13 +89,19 @@ void setup() {
   lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
   lv_indev_set_read_cb(indev, lv_touchpad_read);
 
-  // Change background color
-  lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0x000000), LV_PART_MAIN);
+  // Initialize the led array descriptors
+  led_array_init();
 
   Serial.println( "Setup done" );
 
-  // Start the UI
+  // Build the UI
   led_tester_ui();
+
+  // Start the LEDs
+  leds.begin();
+
+  // Register the refresh function. We are going to use an LVGL timer to call this function.
+  lv_timer_create(led_refresh_cb, 1000 / LED_REFRESH_RATE_HZ, NULL);
 }
 
 
@@ -147,4 +167,10 @@ static void lv_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data )
       data->point.y = tp.tp[0].y;
       break;
   }
+}
+
+// Refresh the LEDs
+static void led_refresh_cb(lv_timer_t * timer)
+{
+  leds.show();
 }

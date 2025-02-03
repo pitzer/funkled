@@ -3,6 +3,7 @@
 #include "led_bar.h"
 #include "led_pattern.h"
 #include "led_palette.h"
+#include "led_array.h"
 #include <Arduino.h>
 #include <FastLED.h>
 
@@ -13,13 +14,13 @@ static lv_obj_t* list_item_widget_create(
     lv_obj_t* parent,
     const char* name,
     const char* desc,
+    uint32_t channel,
     const led_pattern_func_t pattern_update,
     const CRGBPalette16* palette,
     bool use_color_selector
 );
 static void pattern_clicked_cb(lv_event_t* e);
 static void palette_clicked_cb(lv_event_t* e);
-
 
 //
 // Static variables
@@ -36,7 +37,7 @@ static lv_style_t style_list_button_checked;
 // Tabs
 static lv_obj_t* tab_pattern_w;
 static lv_obj_t* tab_color_w;
-static lv_obj_t* tab_system_w;
+static lv_obj_t* tab_channel_w;
 static lv_obj_t* tab_params_w;
 
 //
@@ -81,7 +82,27 @@ void led_tester_ui(void)
     lv_tabview_set_tab_bar_size(tv, tab_h);
     lv_obj_set_style_text_font(lv_screen_active(), font_normal, 0);
 
-    // First tab: patterns
+    // First tab: channel
+    String system_str = String(LV_SYMBOL_LIST) + " Channel";
+    tab_channel_w = lv_tabview_add_tab(tv, system_str.c_str());
+    lv_obj_set_flex_flow(tab_channel_w, LV_FLEX_FLOW_COLUMN);
+    lv_obj_add_style(tab_channel_w, &style_list, 0);
+    for (uint32_t i = 0; i < num_led_channels; i++) {
+        led_string_t* led_string = &led_strings[i];
+        lv_obj_t* channel_w = list_item_widget_create(
+            tab_channel_w,
+            String(i).c_str(),
+            NULL,
+            i,
+            NULL,
+            NULL,
+            false);
+        //lv_obj_add_event_cb(channel_w, channel_clicked_cb, LV_EVENT_CLICKED, (void*) i);
+    }
+
+
+
+    // Second tab: patterns
     String pattern_str = String(LV_SYMBOL_LOOP) + " Pattern";
     tab_pattern_w = lv_tabview_add_tab(tv, pattern_str.c_str());
     lv_obj_set_flex_flow(tab_pattern_w, LV_FLEX_FLOW_COLUMN);
@@ -92,13 +113,14 @@ void led_tester_ui(void)
             tab_pattern_w,
             pattern->name,
             pattern->desc,
+            CHANNEL_CURRENT,
             pattern->update,
             NULL,
             false);
         lv_obj_add_event_cb(pattern_w, pattern_clicked_cb, LV_EVENT_CLICKED, (void*) i);
     }
 
-    // Second tab: colors
+    // Third tab: colors
     String color_str = String(LV_SYMBOL_TINT) + " Color";
     tab_color_w = lv_tabview_add_tab(tv, color_str.c_str());
     lv_obj_set_flex_flow(tab_color_w, LV_FLEX_FLOW_COLUMN);
@@ -111,19 +133,14 @@ void led_tester_ui(void)
             tab_color_w,
             palette->name,
             palette->desc,
+            CHANNEL_CURRENT,
             NULL,
             &palette->palette,
             String(palette->name) == "Solid");
         lv_obj_add_event_cb(palette_w, palette_clicked_cb, LV_EVENT_CLICKED, (void*) i);
     }
 
-
-    // third tab: system
-    String system_str = String(LV_SYMBOL_POWER) + " System";
-    tab_system_w = lv_tabview_add_tab(tv, system_str.c_str());
-    lv_obj_set_flex_flow(tab_system_w, LV_FLEX_FLOW_COLUMN);
-
-    // fourth tab: options
+    // Fourth tab: options
     String params_str = String(LV_SYMBOL_SETTINGS) + " Params";
     tab_params_w = lv_tabview_add_tab(tv, params_str.c_str());
     lv_obj_set_flex_flow(tab_params_w, LV_FLEX_FLOW_COLUMN);
@@ -145,6 +162,7 @@ static lv_obj_t* list_item_widget_create(
     lv_obj_t* parent,
     const char* name,
     const char* desc,
+    uint32_t channel,
     const led_pattern_func_t pattern_update,
     const CRGBPalette16* palette,
     bool use_color_selector
@@ -165,11 +183,13 @@ static lv_obj_t* list_item_widget_create(
     lv_label_set_long_mode(name_w, LV_LABEL_LONG_WRAP);
     
     // The description
-    lv_obj_t* desc_w = lv_label_create(btn_w);
-    lv_obj_add_style(desc_w, &style_text_muted, 0);
-    lv_label_set_text(desc_w, desc);
-    lv_obj_set_grid_cell(desc_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_START, 0, 1);
-    lv_label_set_long_mode(desc_w, LV_LABEL_LONG_WRAP);
+    if (desc != NULL) {
+        lv_obj_t* desc_w = lv_label_create(btn_w);
+        lv_obj_add_style(desc_w, &style_text_muted, 0);
+        lv_label_set_text(desc_w, desc);
+        lv_obj_set_grid_cell(desc_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_START, 0, 1);
+        lv_label_set_long_mode(desc_w, LV_LABEL_LONG_WRAP);
+    }
 
     lv_obj_t* last_panel_w;
     if (use_color_selector) {
@@ -182,7 +202,7 @@ static lv_obj_t* list_item_widget_create(
         lv_obj_set_style_shadow_opa(last_panel_w, LV_OPA_0, 0);
     } else {
         // The led bar
-        last_panel_w = led_bar_create(btn_w, 16, pattern_update, palette, 4000);
+        last_panel_w = led_bar_create(btn_w, 16, channel, pattern_update, palette, 3000);
     }
     lv_obj_set_width(last_panel_w, LV_PCT(100));
     lv_obj_set_grid_cell(last_panel_w, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_END, 1, 1);
@@ -192,7 +212,8 @@ static lv_obj_t* list_item_widget_create(
 
 static void pattern_clicked_cb(lv_event_t* e) {
     // Get the new pattern index
-    pattern_index = (uint32_t) lv_event_get_user_data(e);
+    uint32_t pattern_index = (uint32_t) lv_event_get_user_data(e);
+    led_strings[current_channel].pattern_index = pattern_index;
     // Unclick all the other buttons
     for (uint32_t i = 0; i < lv_obj_get_child_count(tab_pattern_w); i++) {
         lv_obj_t* btn_w = lv_obj_get_child(tab_pattern_w, i);
@@ -207,7 +228,8 @@ static void pattern_clicked_cb(lv_event_t* e) {
 
 static void palette_clicked_cb(lv_event_t* e) {
     // Get the new palette index
-    palette_index = (uint32_t) lv_event_get_user_data(e);
+    uint32_t palette_index = (uint32_t) lv_event_get_user_data(e);
+    led_strings[current_channel].palette_index = palette_index;
     // Unclick all the other buttons
     for (uint32_t i = 0; i < lv_obj_get_child_count(tab_color_w); i++) {
         lv_obj_t* btn_w = lv_obj_get_child(tab_color_w, i);

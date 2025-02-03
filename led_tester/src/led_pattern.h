@@ -34,13 +34,5 @@ extern led_pattern_t led_patterns[];
 // Number of patterns available
 extern uint32_t num_led_patterns();
 
-// The current pattern index
-extern uint32_t pattern_index;
-
-// Get the current pattern
-inline led_pattern_t* current_pattern() {
-    return &led_patterns[pattern_index];
-}
-
 #endif // LED_PATTERN_H
 

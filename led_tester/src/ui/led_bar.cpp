@@ -1,6 +1,7 @@
 #include "led_bar.h"
 #include "led_pattern.h"
 #include "led_palette.h"
+#include "led_array.h"
 #include <Arduino.h>
 
 //
@@ -13,6 +14,8 @@ typedef struct {
     int32_t* grid_col_dsc;
     // The FastLED LED array
     CRGB* leds;
+    // The channel index
+    uint32_t channel;
     // The pattern update function to use for the LEDs
     led_pattern_func_t pattern_update;
     // The palette to use for the LEDs
@@ -35,7 +38,7 @@ static void led_set_color(lv_obj_t * led, lv_color_t color);
 //
 // Global functions
 //
-lv_obj_t* led_bar_create(lv_obj_t* parent, uint32_t num_leds, const led_pattern_func_t pattern_update, const CRGBPalette16* palette, uint32_t period_ms) {
+lv_obj_t* led_bar_create(lv_obj_t* parent, uint32_t num_leds, uint32_t channel, const led_pattern_func_t pattern_update, const CRGBPalette16* palette, uint32_t period_ms) {
     lv_obj_t* led_bar_w = lv_obj_create(parent);
     // The grid descriptor arrays do not get copied by the lvgl library, so
     // they cannot be static or locally scoped.
@@ -63,6 +66,7 @@ lv_obj_t* led_bar_create(lv_obj_t* parent, uint32_t num_leds, const led_pattern_
     led_bar_data_t* led_data = new led_bar_data_t;
     led_data->grid_col_dsc = grid_col_dsc;
     led_data->period_ms = period_ms;
+    led_data->channel = channel;
     led_data->pattern_update = pattern_update;
     led_data->palette = palette;
     led_data->num_leds = num_leds;
@@ -130,14 +134,18 @@ static void led_bar_timer_cb(lv_timer_t * timer)
     led_bar_data_t* led_bar_data = (led_bar_data_t*) lv_obj_get_user_data(led_bar_w);
 
     // Fill the LED array with the pattern
-    // If any of the pattern or palette functions are NULL, use the current one
+    // If any of the information is not available, use the current one
+    uint32_t channel = led_bar_data->channel;
+    if (channel == CHANNEL_CURRENT) {
+        channel = current_channel;
+    }
     const CRGBPalette16* palette = led_bar_data->palette;
     if (palette == NULL) {
-        palette = current_palette();
+        palette = &led_palettes[led_strings[channel].palette_index].palette;
     }
     led_pattern_func_t pattern_update = led_bar_data->pattern_update;
     if (pattern_update == NULL) {
-        pattern_update = current_pattern()->update;
+        pattern_update = led_patterns[led_strings[channel].pattern_index].update;
     }
 
     uint32_t time_ms = millis();
