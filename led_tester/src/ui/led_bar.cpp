@@ -105,8 +105,7 @@ static lv_obj_t* led_widget_create(lv_obj_t* parent, int size)
 static void led_set_color(lv_obj_t * led, lv_color_t color)
 {
     // Figure out the overall brightness of the color
-    uint32_t brightness = (color.red + color.green + color.blue);
-    brightness = brightness > 255 ? 255 : brightness; 
+    uint32_t brightness = max(max(color.red, color.green), color.blue);
     uint32_t shadow_opacity = brightness < 128 ? 0 : (brightness - 128) * 2;
     lv_obj_set_style_bg_color(led, color, 0);
     lv_obj_set_style_shadow_color(led, color, 0);

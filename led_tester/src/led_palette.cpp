@@ -3,6 +3,11 @@
 
 led_palette_t led_palettes[] = {
     {
+        .name = "Heat",
+        .desc = "It's getting hot in here...",
+        .palette = HeatColors_p,
+    },
+    {
         .name = "Solid",
         .desc = "A solid color.",
         .palette = CRGBPalette16(CRGB::White),
@@ -11,11 +16,6 @@ led_palette_t led_palettes[] = {
         .name = "Rainbow",
         .desc = "Colors of the rainbow.",
         .palette = RainbowColors_p,
-    },
-    {
-        .name = "Rainbow Stripe",
-        .desc = "Colors of the rainbow with a stripe moving across.",
-        .palette = RainbowStripeColors_p,
     },
     {
         .name = "Forest",
@@ -43,9 +43,9 @@ led_palette_t led_palettes[] = {
         .palette = PartyColors_p,
     },
     {
-        .name = "Heat",
-        .desc = "It's getting hot in here...",
-        .palette = HeatColors_p,
+        .name = "Rainbow Stripe",
+        .desc = "Colors of the rainbow with a stripe moving across.",
+        .palette = RainbowStripeColors_p,
     },
 };
 
@@ -53,4 +53,4 @@ uint32_t num_led_palettes() {
     return sizeof(led_palettes) / sizeof(led_palette_t);
 }
 
-uint32_t palette_index = 1;
+uint32_t palette_index = 0;

@@ -7,9 +7,6 @@
 #include <FastLED.h>
 
 //
-// Typedefs
-//
-//
 // Static prototypes
 //
 static lv_obj_t* list_item_widget_create(
@@ -79,11 +76,10 @@ void led_tester_ui(void)
     lv_style_set_bg_opa(&style_list_button_checked, 35);
     lv_style_set_text_color(&style_list_button_checked, lv_color_hex(0x202020));
 
+    // Create the top level tab view
     lv_obj_t* tv = lv_tabview_create(lv_screen_active());
     lv_tabview_set_tab_bar_size(tv, tab_h);
-
     lv_obj_set_style_text_font(lv_screen_active(), font_normal, 0);
-
 
     // First tab: patterns
     String pattern_str = String(LV_SYMBOL_LOOP) + " Pattern";
@@ -117,7 +113,7 @@ void led_tester_ui(void)
             palette->desc,
             NULL,
             &palette->palette,
-            i == 0);
+            String(palette->name) == "Solid");
         lv_obj_add_event_cb(palette_w, palette_clicked_cb, LV_EVENT_CLICKED, (void*) i);
     }
 
@@ -126,16 +122,18 @@ void led_tester_ui(void)
     String system_str = String(LV_SYMBOL_POWER) + " System";
     tab_system_w = lv_tabview_add_tab(tv, system_str.c_str());
     lv_obj_set_flex_flow(tab_system_w, LV_FLEX_FLOW_COLUMN);
-    //lv_obj_t* led_bar_w = led_bar_create(tab_system_w, 16, NULL);
-    //lv_obj_set_width(led_bar_w, LV_PCT(97));
 
     // fourth tab: options
     String params_str = String(LV_SYMBOL_SETTINGS) + " Params";
     tab_params_w = lv_tabview_add_tab(tv, params_str.c_str());
     lv_obj_set_flex_flow(tab_params_w, LV_FLEX_FLOW_COLUMN);
 
+    // Select the first pattern and palette by simulating a click on the right buttons
+    lv_obj_t* pattern_w = lv_obj_get_child(tab_pattern_w, 0);
+    lv_obj_t* palette_w = lv_obj_get_child(tab_color_w, 0);
 
-
+    lv_obj_send_event(pattern_w, LV_EVENT_CLICKED, NULL);
+    lv_obj_send_event(palette_w, LV_EVENT_CLICKED, NULL);
 }
 
 //
@@ -184,7 +182,7 @@ static lv_obj_t* list_item_widget_create(
         lv_obj_set_style_shadow_opa(last_panel_w, LV_OPA_0, 0);
     } else {
         // The led bar
-        last_panel_w = led_bar_create(btn_w, 16, pattern_update, palette, 2000);
+        last_panel_w = led_bar_create(btn_w, 16, pattern_update, palette, 4000);
     }
     lv_obj_set_width(last_panel_w, LV_PCT(100));
     lv_obj_set_grid_cell(last_panel_w, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_END, 1, 1);
@@ -218,6 +216,16 @@ static void palette_clicked_cb(lv_event_t* e) {
         } else {
             lv_obj_add_state(btn_w, LV_STATE_CHECKED);
         }
+    }
+    // If the solid palette is selected, update its color
+    const char* name = led_palettes[palette_index].name;
+    if (String(name) == "Solid") {
+        lv_obj_t* btn_w = lv_obj_get_child(tab_color_w, palette_index);
+        lv_obj_t* color_selector_w = lv_obj_get_child(btn_w, 2);
+        lv_obj_t* patch_w = lv_obj_get_child(color_selector_w, 1);
+        lv_color_t color_lv = lv_obj_get_style_bg_color(patch_w, 0);
+        CRGB color_crgb = CRGB(color_lv.red, color_lv.green, color_lv.blue);
+        led_palettes[palette_index].palette = CRGBPalette16(color_crgb);
     }
 
 }
