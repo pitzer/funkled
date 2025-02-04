@@ -1,4 +1,5 @@
 #include "color_selector.h"
+#include "slider.h"
 #include <Arduino.h>
 
 //
@@ -10,7 +11,6 @@
 //
 static void colorwheel_pressed_cb(lv_event_t * e);
 static void slider_pressed_cb(lv_event_t * e);
-static lv_obj_t* slider_create(lv_obj_t* parent, lv_color_t color);
 static void change_color(lv_obj_t* color_selector_w, lv_color_t color);
 
 //
@@ -18,7 +18,7 @@ static void change_color(lv_obj_t* color_selector_w, lv_color_t color);
 //
 lv_obj_t* color_selector_create(lv_obj_t* parent) {
     lv_obj_t* color_selector_w = lv_btn_create(parent);
-    static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, 7, LV_GRID_FR(1), 7, LV_GRID_TEMPLATE_LAST};
+    static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, 7, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
     static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, 30, 30, 30, LV_GRID_TEMPLATE_LAST};
     lv_obj_set_grid_dsc_array(color_selector_w, grid_col_dsc, grid_row_dsc);
     lv_obj_add_flag(color_selector_w, LV_OBJ_FLAG_EVENT_BUBBLE);
@@ -37,14 +37,14 @@ lv_obj_t* color_selector_create(lv_obj_t* parent) {
     lv_obj_set_style_text_align(patch_w, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_height(patch_w, 30);
     lv_obj_set_style_radius(patch_w, 10, 0);
-    lv_obj_set_grid_cell(patch_w, LV_GRID_ALIGN_STRETCH, 1, 3, LV_GRID_ALIGN_CENTER, 0, 1);
+    lv_obj_set_grid_cell(patch_w, LV_GRID_ALIGN_STRETCH, 1, 2, LV_GRID_ALIGN_CENTER, 0, 1);
     lv_obj_clear_flag(patch_w, LV_OBJ_FLAG_CLICKABLE);
     // The three sliders
-    lv_obj_t* red_slider_w = slider_create(color_selector_w, lv_color_hex(0xFF0000));
+    lv_obj_t* red_slider_w = slider_create(color_selector_w, lv_color_hex(0xFF0000), slider_pressed_cb);
     lv_obj_set_grid_cell(red_slider_w, LV_GRID_ALIGN_STRETCH, 2, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-    lv_obj_t* green_slider_w = slider_create(color_selector_w, lv_color_hex(0x00FF00));
+    lv_obj_t* green_slider_w = slider_create(color_selector_w, lv_color_hex(0x00FF00), slider_pressed_cb);
     lv_obj_set_grid_cell(green_slider_w, LV_GRID_ALIGN_STRETCH, 2, 1, LV_GRID_ALIGN_CENTER, 2, 1);
-    lv_obj_t* blue_slider_w = slider_create(color_selector_w, lv_color_hex(0x0000FF));
+    lv_obj_t* blue_slider_w = slider_create(color_selector_w, lv_color_hex(0x0000FF), slider_pressed_cb);
     lv_obj_set_grid_cell(blue_slider_w, LV_GRID_ALIGN_STRETCH, 2, 1, LV_GRID_ALIGN_CENTER, 3, 1);
     // Initial color set
     change_color(color_selector_w, lv_color_hex(0xFFFFFF));
@@ -128,18 +128,3 @@ static void change_color(lv_obj_t* color_selector_w, lv_color_t color) {
     lv_slider_set_value(blue_slider_w, color.blue, LV_ANIM_ON);
 }
 
-
-static lv_obj_t* slider_create(lv_obj_t* parent, lv_color_t color) {
-    lv_obj_t* slider_w = lv_slider_create(parent);
-    lv_obj_set_style_bg_color(slider_w, color, LV_PART_KNOB);
-    lv_obj_set_style_bg_color(slider_w, color, LV_PART_INDICATOR);
-    lv_obj_set_style_border_width(slider_w, 2, LV_PART_KNOB);
-    lv_obj_set_style_border_color(slider_w, lv_color_hex(0x808080), LV_PART_KNOB);
-    lv_obj_set_style_pad_all(slider_w, 1, LV_PART_KNOB);
-    lv_obj_set_height(slider_w, 20);
-    lv_slider_set_range(slider_w, 0, 255);
-    lv_slider_set_value(slider_w, 0, LV_ANIM_OFF);
-    lv_obj_add_event_cb(slider_w, slider_pressed_cb, LV_EVENT_PRESSING, parent);
-    lv_obj_add_flag(slider_w, LV_OBJ_FLAG_EVENT_BUBBLE);
-    return slider_w;
-}

@@ -5,6 +5,7 @@
 #include "led_palette.h"
 #include "led_array.h"
 #include "number_input.h"
+#include "slider.h"
 #include <Arduino.h>
 #include <FastLED.h>
 
@@ -13,6 +14,8 @@
 //
 // The default period to use when displaying patterns
 const uint32_t default_period_ms = 3000;
+// The default brightness to use when displaying patterns
+const uint8_t default_brightness = 255;
 
 //
 // Static prototypes
@@ -25,11 +28,13 @@ static lv_obj_t* list_item_widget_create(
     const led_pattern_func_t pattern_update,
     const CRGBPalette16* palette,
     const uint32_t* period_ms,
+    const uint8_t* brightness,
     bool use_color_selector
 );
 static void pattern_clicked_cb(lv_event_t* e);
 static void palette_clicked_cb(lv_event_t* e);
 static void channel_clicked_cb(lv_event_t* e);
+static void brightness_pressed_cb(lv_event_t* e);
 
 //
 // Static variables
@@ -53,6 +58,8 @@ static lv_obj_t* tab_params_w;
 static lv_obj_t* channel_label_w;
 static lv_obj_t* num_leds_w;
 static lv_obj_t* period_w;
+static lv_obj_t* brightness_w;
+static lv_obj_t* brightness_value_w;
 
 //
 // Global functions
@@ -113,6 +120,7 @@ void led_tester_ui(void)
             NULL,
             NULL,
             NULL,
+            NULL,
             false);
         lv_obj_add_event_cb(channel_w, channel_clicked_cb, LV_EVENT_CLICKED, (void*) i);
     }
@@ -132,6 +140,7 @@ void led_tester_ui(void)
             pattern->update,
             NULL,
             &default_period_ms,
+            &default_brightness,
             false);
         lv_obj_add_event_cb(pattern_w, pattern_clicked_cb, LV_EVENT_CLICKED, (void*) i);
     }
@@ -153,6 +162,7 @@ void led_tester_ui(void)
             NULL,
             &palette->palette,
             &default_period_ms,
+            &default_brightness,
             String(palette->name) == "Solid");
         lv_obj_add_event_cb(palette_w, palette_clicked_cb, LV_EVENT_CLICKED, (void*) i);
     }
@@ -162,7 +172,7 @@ void led_tester_ui(void)
     tab_params_w = lv_tabview_add_tab(tabview_w, params_str.c_str());
     lv_obj_add_style(tab_params_w, &style_list, 0);
     static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-    static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
+    static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
     lv_obj_set_grid_dsc_array(tab_params_w, grid_col_dsc, grid_row_dsc);
     // Title
     channel_label_w = lv_label_create(tab_params_w);
@@ -183,6 +193,16 @@ void led_tester_ui(void)
     period_w = number_input_create(tab_params_w, &led_strings[current_channel].update_period_ms, 100, 10000);
     lv_obj_set_grid_cell(period_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 2, 1);
     lv_obj_set_grid_cell(period_w, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 2, 1);
+    // Brightness
+    lv_obj_t* brightness_label_w = lv_label_create(tab_params_w);
+    lv_label_set_text(brightness_label_w, "Brightness");
+    lv_obj_add_style(brightness_label_w, &style_text_muted, 0);
+    brightness_value_w = lv_label_create(tab_params_w);
+    lv_label_set_text(brightness_value_w, "");
+    brightness_w = slider_create(tab_params_w, lv_color_hex(0x000080), brightness_pressed_cb);
+    lv_obj_set_grid_cell(brightness_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 3, 1);
+    lv_obj_set_grid_cell(brightness_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
+    lv_obj_set_grid_cell(brightness_value_w, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
 
     // Select the first channel
     lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
@@ -201,6 +221,7 @@ static lv_obj_t* list_item_widget_create(
     const led_pattern_func_t pattern_update,
     const CRGBPalette16* palette,
     const uint32_t* period_ms,
+    const uint8_t* brightness,
     bool use_color_selector
 ) {
     // The top button widget
@@ -245,7 +266,7 @@ static lv_obj_t* list_item_widget_create(
         lv_obj_set_style_shadow_opa(last_panel_w, LV_OPA_0, 0);
     } else {
         // The led bar
-        last_panel_w = led_bar_create(btn_w, 16, channel, pattern_update, palette, period_ms);
+        last_panel_w = led_bar_create(btn_w, 16, channel, pattern_update, palette, period_ms, brightness);
     }
     lv_obj_set_width(last_panel_w, LV_PCT(100));
     if (desc) {
@@ -320,8 +341,18 @@ static void channel_clicked_cb(lv_event_t* e) {
     lv_obj_t* palette_w = lv_obj_get_child(tab_color_w, led_strings[channel].palette_index);
     lv_obj_send_event(pattern_w, LV_EVENT_CLICKED, NULL);
     lv_obj_send_event(palette_w, LV_EVENT_CLICKED, NULL);
-    // Update the number of LEDs and the period
+    // Update the number of LEDs, the period and the brightness
     number_input_update(num_leds_w, &led_strings[channel].num_leds);
     number_input_update(period_w, &led_strings[channel].update_period_ms);
     lv_label_set_text(channel_label_w, ("Channel " + String(channel)).c_str());
+    lv_slider_set_value(brightness_w, led_strings[channel].brightness, LV_ANIM_OFF);
+    lv_label_set_text(brightness_value_w, String(led_strings[channel].brightness).c_str());
+}
+
+static void brightness_pressed_cb(lv_event_t* e) {
+    // Get the new brightness value
+    lv_obj_t* slider_w = (lv_obj_t*) lv_event_get_target(e);
+    uint32_t brightness = lv_slider_get_value(slider_w);
+    lv_label_set_text(brightness_value_w, String(brightness).c_str());
+    led_strings[current_channel].brightness = brightness;
 }

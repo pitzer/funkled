@@ -7,9 +7,7 @@
 #error "LV_USE_GRID needs to be enabled"
 #endif
 
-/**********************
- * GLOBAL PROTOTYPES
- **********************/
+// Create a color selector widget
 lv_obj_t* color_selector_create(lv_obj_t* parent);
 
 #endif /*LV_COLOR_SELECTOR_H*/

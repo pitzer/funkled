@@ -15,9 +15,7 @@ extern "C" {
 #error "LV_USE_FLEX needs to be enabled"
 #endif
 
-/**********************
- * GLOBAL PROTOTYPES
- **********************/
+// Create a complete UI for the LED tester
 void led_tester_ui(void);
 
 #ifdef __cplusplus

@@ -24,6 +24,8 @@ typedef struct {
     uint32_t num_leds;
     // The pCRGBPalette32pattern
     const uint32_t* period_ms;
+    // The brightness of the LEDs
+    const uint8_t* brightness;
 } led_bar_data_t;
 
 
@@ -44,7 +46,8 @@ lv_obj_t* led_bar_create(
         uint32_t channel,
         const led_pattern_func_t pattern_update,
         const CRGBPalette16* palette,
-        const uint32_t* period_ms)
+        const uint32_t* period_ms,
+        const uint8_t* brightness)
 {
     lv_obj_t* led_bar_w = lv_obj_create(parent);
     // The grid descriptor arrays do not get copied by the lvgl library, so
@@ -73,6 +76,7 @@ lv_obj_t* led_bar_create(
     led_bar_data_t* led_data = new led_bar_data_t;
     led_data->grid_col_dsc = grid_col_dsc;
     led_data->period_ms = period_ms;
+    led_data->brightness = brightness;
     led_data->channel = channel;
     led_data->pattern_update = pattern_update;
     led_data->palette = palette;
@@ -166,6 +170,7 @@ static void led_bar_timer_cb(lv_timer_t * timer)
     for (uint32_t i = 0; i < led_bar_data->num_leds; i++) {
         lv_obj_t* led = lv_obj_get_child(led_bar_w, i);
         CRGB color_crgb = led_bar_data->leds[i];
+        color_crgb.nscale8(led_strings[channel].brightness);
         lv_color_t color_lv = lv_color_make(color_crgb.red, color_crgb.green, color_crgb.blue);
         led_set_color(led, color_lv);
     }
