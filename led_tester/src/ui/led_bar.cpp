@@ -162,6 +162,10 @@ static void led_bar_timer_cb(lv_timer_t * timer)
     if (led_bar_data->period_ms) {
         period_ms = *led_bar_data->period_ms;
     }
+    uint8_t brightness = led_strings[channel].brightness;
+    if (led_bar_data->brightness) {
+        brightness = *led_bar_data->brightness;
+    }
 
     uint32_t time_ms = millis();
     pattern_update(time_ms, period_ms, palette, led_bar_data->num_leds, led_bar_data->leds);
@@ -170,7 +174,7 @@ static void led_bar_timer_cb(lv_timer_t * timer)
     for (uint32_t i = 0; i < led_bar_data->num_leds; i++) {
         lv_obj_t* led = lv_obj_get_child(led_bar_w, i);
         CRGB color_crgb = led_bar_data->leds[i];
-        color_crgb.nscale8(led_strings[channel].brightness);
+        color_crgb.nscale8(brightness);
         lv_color_t color_lv = lv_color_make(color_crgb.red, color_crgb.green, color_crgb.blue);
         led_set_color(led, color_lv);
     }
