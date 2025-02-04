@@ -15,7 +15,7 @@ lv_obj_t* led_bar_create(
     uint32_t channel,
     const led_pattern_func_t pattern_update,
     const CRGBPalette16* palette,
-    uint32_t period_ms
+    const uint32_t* period_ms
 );
 
 #endif /*LV_led_bar_H*/

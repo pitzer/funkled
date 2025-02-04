@@ -50,14 +50,14 @@ void blink_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* pa
 
 led_pattern_t led_patterns[] = {
     {
-        .name = "Static",
-        .desc = "Assign the LEDs to a static palette",
-        .update = static_pattern,
-    },
-    {
         .name = "Rotate",
         .desc = "Rotate through a palette",
         .update = rotate_pattern,
+    },
+    {
+        .name = "Static",
+        .desc = "Assign the LEDs to a static palette",
+        .update = static_pattern,
     },
     {
         .name = "Fade",
