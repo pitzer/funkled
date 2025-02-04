@@ -172,7 +172,7 @@ void led_tester_ui(void)
     tab_params_w = lv_tabview_add_tab(tabview_w, params_str.c_str());
     lv_obj_add_style(tab_params_w, &style_list, 0);
     static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-    static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
+    static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, 15, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
     lv_obj_set_grid_dsc_array(tab_params_w, grid_col_dsc, grid_row_dsc);
     // Title
     channel_label_w = lv_label_create(tab_params_w);
@@ -203,6 +203,9 @@ void led_tester_ui(void)
     lv_obj_set_grid_cell(brightness_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 3, 1);
     lv_obj_set_grid_cell(brightness_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
     lv_obj_set_grid_cell(brightness_value_w, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
+    // LED bar
+    lv_obj_t* led_bar_w = led_bar_create(tab_params_w, 16, CHANNEL_CURRENT, NULL, NULL, NULL, NULL);
+    lv_obj_set_grid_cell(led_bar_w, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_CENTER, 5, 1);
 
     // Select the first channel
     lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
