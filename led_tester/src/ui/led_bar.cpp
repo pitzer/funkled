@@ -166,6 +166,8 @@ static void led_bar_timer_cb(lv_timer_t * timer)
     if (led_bar_data->brightness) {
         brightness = *led_bar_data->brightness;
     }
+    // Add some simple gamma correction, to make the LEDs more visible
+    brightness = sqrt((uint32_t) brightness * 256);
 
     uint32_t time_ms = millis();
     pattern_update(time_ms, period_ms, palette, led_bar_data->num_leds, led_bar_data->leds);
