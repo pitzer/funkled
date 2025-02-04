@@ -166,9 +166,6 @@ static void led_bar_timer_cb(lv_timer_t * timer)
     if (led_bar_data->brightness) {
         brightness = *led_bar_data->brightness;
     }
-    // Add some simple gamma correction, to make the LEDs more visible
-    brightness = sqrt((uint32_t) brightness * 256);
-
     uint32_t time_ms = millis();
     pattern_update(time_ms, period_ms, palette, led_bar_data->num_leds, led_bar_data->leds);
 
@@ -177,6 +174,8 @@ static void led_bar_timer_cb(lv_timer_t * timer)
         lv_obj_t* led = lv_obj_get_child(led_bar_w, i);
         CRGB color_crgb = led_bar_data->leds[i];
         color_crgb.nscale8(brightness);
+        // Apply some simple gamma correction, to make the LEDs more realistic looking
+        color_crgb = applyGamma_video (color_crgb, 0.5);
         lv_color_t color_lv = lv_color_make(color_crgb.red, color_crgb.green, color_crgb.blue);
         led_set_color(led, color_lv);
     }
