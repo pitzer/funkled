@@ -13,7 +13,7 @@ void static_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* p
 // Rotate all the LEDs on a palette
 void rotate_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* palette, uint32_t num_leds, CRGB* leds)
 {
-    uint32_t offset = time_ms * 255 / period_ms;
+    uint32_t offset = 255 - time_ms * 255 / period_ms;
     for (uint32_t i = 0; i < num_leds; i++) {
         uint8_t palette_index = i * 255 / num_leds + offset;
         leds[i] = ColorFromPalette(*palette, palette_index);

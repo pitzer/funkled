@@ -172,5 +172,23 @@ static void lv_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data )
 // Refresh the LEDs
 static void led_refresh_cb(lv_timer_t * timer)
 {
+  uint32_t now = millis();
+  for (uint32_t i = 0; i < num_led_channels; i++) {
+    CRGB leds_crgb[led_strings[i].num_leds];
+    led_patterns[led_strings[i].pattern_index].update(
+      now,
+      led_strings[i].update_period_ms,
+      &led_palettes[led_strings[i].palette_index].palette,
+      led_strings[i].num_leds,
+      leds_crgb);
+    for (uint32_t j = 0; j < max_leds_per_channel; j++) {
+      uint32_t color_u32 = 0x000000;
+      if (j < led_strings[i].num_leds) {
+        leds_crgb[j].nscale8(led_strings[i].brightness);
+        color_u32 = leds_crgb[j].r << 16 | leds_crgb[j].g << 8 | leds_crgb[j].b;
+      }
+      leds.setPixel(i * max_leds_per_channel + j, color_u32);
+    }
+  }
   leds.show();
 }
