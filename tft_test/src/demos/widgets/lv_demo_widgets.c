@@ -1097,7 +1097,7 @@ static void color_changer_create(lv_obj_t * parent)
     }
 }
 
-static void color_changer_anim_cb(void * var, int32_t v)
+static void file_menu_anim_cb(void * var, int32_t v)
 {
     lv_obj_t * obj = var;
     int32_t max_w = lv_obj_get_width(lv_obj_get_parent(obj)) - LV_DPX(20);
@@ -1131,7 +1131,7 @@ static void color_changer_event_cb(lv_event_t * e)
             lv_anim_t a;
             lv_anim_init(&a);
             lv_anim_set_var(&a, color_cont);
-            lv_anim_set_exec_cb(&a, color_changer_anim_cb);
+            lv_anim_set_exec_cb(&a, file_menu_anim_cb);
             lv_anim_set_values(&a, 0, 256);
             lv_anim_set_duration(&a, 200);
             lv_anim_start(&a);
@@ -1140,7 +1140,7 @@ static void color_changer_event_cb(lv_event_t * e)
             lv_anim_t a;
             lv_anim_init(&a);
             lv_anim_set_var(&a, color_cont);
-            lv_anim_set_exec_cb(&a, color_changer_anim_cb);
+            lv_anim_set_exec_cb(&a, file_menu_anim_cb);
             lv_anim_set_values(&a, 256, 0);
             lv_anim_set_duration(&a, 200);
             lv_anim_start(&a);
@@ -1158,7 +1158,7 @@ static void color_event_cb(lv_event_t * e)
             lv_anim_t a;
             lv_anim_init(&a);
             lv_anim_set_var(&a, color_cont);
-            lv_anim_set_exec_cb(&a, color_changer_anim_cb);
+            lv_anim_set_exec_cb(&a, file_menu_anim_cb);
             lv_anim_set_values(&a, 0, 256);
             lv_anim_set_duration(&a, 200);
             lv_anim_start(&a);

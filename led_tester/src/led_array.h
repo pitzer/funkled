@@ -51,15 +51,7 @@ extern uint32_t current_channel;
 // Functions
 //
 void led_array_init();
-
-// Get the current pattern
-inline led_pattern_t* current_pattern() {
-    return &led_patterns[led_strings[current_channel].pattern_index];
-}
-
-// Get the current palette
-inline CRGBPalette16* current_palette() {
-    return &led_palettes[led_strings[current_channel].palette_index].palette;
-}
+void led_array_save();
+void led_array_load();
 
 #endif // LED_PALETTE_H

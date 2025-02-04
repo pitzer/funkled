@@ -5,6 +5,7 @@
 #include "led_palette.h"
 #include "led_array.h"
 #include "number_input.h"
+#include "file_menu.h"
 #include "slider.h"
 #include <Arduino.h>
 #include <FastLED.h>
@@ -36,6 +37,7 @@ static void palette_clicked_cb(lv_event_t* e);
 static void channel_clicked_cb(lv_event_t* e);
 static void brightness_pressed_cb(lv_event_t* e);
 static void color_order_changed_cb(lv_event_t* e);
+static void file_menu_cb(uint32_t index);
 
 //
 // Static variables
@@ -219,6 +221,13 @@ void led_tester_ui(void)
     lv_obj_set_grid_cell(brightness_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 4, 1);
     lv_obj_set_grid_cell(brightness_value_w, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 4, 1);
 
+    // The file menu
+    static const char* file_menu_items[] = {LV_SYMBOL_DOWNLOAD, LV_SYMBOL_UPLOAD, LV_SYMBOL_HOME, NULL};
+    file_menu_create(tabview_w, file_menu_items, file_menu_cb);
+
+    // Attempt to load the data from the EEPROM
+    led_array_load();
+
     // Select the first channel
     lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
 }
@@ -376,4 +385,23 @@ static void color_order_changed_cb(lv_event_t* e) {
     // Get the new order value
     uint32_t order = lv_dropdown_get_selected(color_order_w);
     led_strings[current_channel].color_order = order;
+}
+
+static void file_menu_cb(uint32_t index) {
+    switch (index) {
+        case 0:
+            // Save the current configuration
+            led_array_save();
+            break;
+        case 1:
+            // Load the saved configuration
+            led_array_load();
+            break;
+        case 2:
+            // Reset the led array
+            led_array_init();
+            // Select the first channel
+            lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
+            break;
+    }
 }
