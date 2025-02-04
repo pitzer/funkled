@@ -175,7 +175,7 @@ static void led_bar_timer_cb(lv_timer_t * timer)
         CRGB color_crgb = led_bar_data->leds[i];
         color_crgb.nscale8(brightness);
         // Apply some simple gamma correction, to make the LEDs more realistic looking
-        color_crgb = applyGamma_video (color_crgb, 0.25);
+        color_crgb = applyGamma_video (color_crgb, 0.35);
         lv_color_t color_lv = lv_color_make(color_crgb.red, color_crgb.green, color_crgb.blue);
         led_set_color(led, color_lv);
     }

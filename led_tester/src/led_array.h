@@ -35,6 +35,8 @@ typedef struct {
     uint32_t update_period_ms;
     // The brightness of the strip
     uint8_t brightness;
+    // The color order of the strip. Uses the OctoWS2811 constants
+    uint8_t color_order;
 } led_string_t;
 
 //
