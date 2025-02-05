@@ -1,12 +1,14 @@
 #include "file_menu.h"
+#include <Arduino.h>
 
-static lv_obj_t* menu_item_create(lv_obj_t* parent, uint32_t index, const char* image, file_menu_cb_t cb);
+static lv_obj_t* menu_item_create(lv_obj_t* parent, const file_menu_item_t* item);
 static void menu_item_event_cb(lv_event_t * e);
 static void file_menu_anim_cb(void * var, int32_t v);
 static void file_menu_event_cb(lv_event_t * e);
+static void message_box_event_cb(lv_event_t * e);
 
-
-lv_obj_t* file_menu_create(lv_obj_t * parent, const char** items, file_menu_cb_t cb) {
+lv_obj_t* file_menu_create(lv_obj_t * parent, const file_menu_item_t* items, uint32_t num_items) {
+    // Create the container for the menu items
     lv_obj_t * menu_cont_w = lv_obj_create(parent);
     lv_obj_remove_style_all(menu_cont_w);
     lv_obj_set_flex_flow(menu_cont_w, LV_FLEX_FLOW_ROW);
@@ -18,11 +20,11 @@ lv_obj_t* file_menu_create(lv_obj_t * parent, const char** items, file_menu_cb_t
     lv_obj_set_style_radius(menu_cont_w, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_size(menu_cont_w, LV_DPX(52), LV_DPX(52));
     lv_obj_align(menu_cont_w, LV_ALIGN_BOTTOM_RIGHT, - LV_DPX(10),  - LV_DPX(10));
-
-    for (uint32_t i = 0; items[i] != NULL; i++) {
-        menu_item_create(menu_cont_w, i, items[i], cb);
+    // Create the menu items
+    for (uint32_t i = 0; i < num_items; i++) {
+        menu_item_create(menu_cont_w, &items[i]);
     }
-
+    // Create the menu button
     lv_obj_t * menu_btn_w = lv_button_create(parent);
     lv_obj_add_flag(menu_btn_w, (lv_obj_flag_t) (LV_OBJ_FLAG_FLOATING | LV_OBJ_FLAG_CLICKABLE));
     lv_obj_set_style_bg_color(menu_btn_w, lv_color_white(), LV_STATE_CHECKED);
@@ -39,17 +41,16 @@ lv_obj_t* file_menu_create(lv_obj_t * parent, const char** items, file_menu_cb_t
     return menu_cont_w;
 }
 
-lv_obj_t* menu_item_create(lv_obj_t* parent, uint32_t index, const char* image, file_menu_cb_t cb) {
+lv_obj_t* menu_item_create(lv_obj_t* parent, const file_menu_item_t* item) {
     lv_obj_t* item_w = lv_button_create(parent);
     lv_obj_set_style_bg_opa(item_w, 35, 0);
     lv_obj_set_style_radius(item_w, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_opa(item_w, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_bg_image_src(item_w, image, 0);
+    lv_obj_set_style_bg_image_src(item_w, item->icon, 0);
     lv_obj_set_size(item_w, LV_DPX(42), LV_DPX(42));
     lv_obj_set_style_text_font(item_w, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(item_w, lv_color_hex(0x202020), 0);
-    lv_obj_set_user_data(item_w, (void*) index);
-    lv_obj_add_event_cb(item_w, menu_item_event_cb, LV_EVENT_ALL, (void*) cb);
+    lv_obj_add_event_cb(item_w, menu_item_event_cb, LV_EVENT_ALL, (void*) item);
     lv_obj_remove_flag(item_w, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
 
     return item_w;
@@ -78,9 +79,14 @@ void menu_item_event_cb(lv_event_t * e) {
         animate_menu(menu_cont_w);
     }
     else if(code == LV_EVENT_CLICKED) {
-        file_menu_cb_t cb = (file_menu_cb_t) lv_event_get_user_data(e);
-        uint32_t index = (uint32_t) lv_obj_get_user_data(obj);
-        cb(index);
+        const file_menu_item_t* item = (file_menu_item_t*) lv_event_get_user_data(e);
+        lv_obj_t* mb_confirm_w = lv_msgbox_create(NULL);
+        lv_msgbox_add_text(mb_confirm_w, item->message);
+        lv_obj_t * btn;
+        btn = lv_msgbox_add_footer_button(mb_confirm_w, "Yes");
+        lv_obj_add_event_cb(btn, message_box_event_cb, LV_EVENT_CLICKED, (void*) item);
+        btn = lv_msgbox_add_footer_button(mb_confirm_w, "Cancel");
+        lv_obj_add_event_cb(btn, message_box_event_cb, LV_EVENT_CLICKED, (void*) item);
     }
 }
 
@@ -102,5 +108,20 @@ static void file_menu_event_cb(lv_event_t * e) {
     if(lv_event_get_code(e) == LV_EVENT_CLICKED) {
         lv_obj_t * menu_cont_w = (lv_obj_t*) lv_event_get_user_data(e);
         animate_menu(menu_cont_w);
+    }
+}
+
+static void message_box_event_cb(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t* obj_w = lv_event_get_target_obj(e);
+    lv_obj_t* label_w = lv_obj_get_child(obj_w, 0);
+    lv_obj_t* mb_w = lv_obj_get_parent(lv_obj_get_parent(obj_w));
+    String text(lv_label_get_text(label_w));
+    if(code == LV_EVENT_CLICKED) {
+        if (text == "Yes") {
+            const file_menu_item_t* item = (file_menu_item_t*) lv_event_get_user_data(e);
+            item->cb();
+        }
+        lv_msgbox_close(mb_w);
     }
 }

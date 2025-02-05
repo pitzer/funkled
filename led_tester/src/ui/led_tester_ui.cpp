@@ -33,7 +33,9 @@ static void palette_clicked_cb(lv_event_t* e);
 static void channel_clicked_cb(lv_event_t* e);
 static void brightness_pressed_cb(lv_event_t* e);
 static void color_ordering_changed_cb(lv_event_t* e);
-static void file_menu_cb(uint32_t index);
+static void save_cb();
+static void load_cb();
+static void reset_cb();
 static void color_selector_cb(lv_color_t color);
 
 //
@@ -211,8 +213,22 @@ void led_tester_ui(void)
     lv_obj_set_grid_cell(brightness_value_w, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 4, 1);
 
     // The file menu
-    static const char* file_menu_items[] = {LV_SYMBOL_DOWNLOAD, LV_SYMBOL_UPLOAD, LV_SYMBOL_HOME, NULL};
-    file_menu_create(tabview_w, file_menu_items, file_menu_cb);
+    static const file_menu_item_t file_menu_items[] = {
+        {
+            .message = "Do you want to save the current configuration to the EEPROM ?\n",
+            .icon = LV_SYMBOL_DOWNLOAD,
+            .cb = save_cb
+        }, {
+            .message = "Do you wand to load the current configuration from the EEPROM ?\n",
+            .icon = LV_SYMBOL_UPLOAD,
+            .cb = load_cb
+        }, {
+            .message = "Do you want to reset the current configuration ?\n",
+            .icon = LV_SYMBOL_HOME,
+            .cb = reset_cb
+        }
+    };
+    file_menu_create(tabview_w, file_menu_items, 3);
 
     // Attempt to load the data from the EEPROM
     led_array_load();
@@ -350,25 +366,23 @@ static void color_ordering_changed_cb(lv_event_t* e) {
     led_strings[current_channel].color_ordering = order;
 }
 
-static void file_menu_cb(uint32_t index) {
-    switch (index) {
-        case 0:
-            // Save the current configuration
-            led_array_save();
-            break;
-        case 1:
-            // Load the saved configuration
-            led_array_load();
-            // Select the first channel to update all the fields
-            lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
-            break;
-        case 2:
-            // Reset the led array
-            led_array_init();
-            // Select the first channel to update all the fields
-            lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
-            break;
-    }
+static void save_cb() {
+    // Save the current configuration
+    led_array_save();
+}
+
+static void load_cb() {
+    // Load the saved configuration
+    led_array_load();
+    // Select the first channel to update all the fields
+    lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
+}
+
+static void reset_cb() {
+    // Reset the led array
+    led_array_init();
+    // Select the first channel to update all the fields
+    lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
 }
 
 static void color_selector_cb(lv_color_t color) {
