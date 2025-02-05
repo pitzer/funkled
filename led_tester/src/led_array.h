@@ -25,18 +25,18 @@ const uint32_t CHANNEL_CURRENT = 0xFFFFFFFF;
 typedef struct {
     // Number of LEDs in the strip
     uint32_t num_leds;
-    // RGB channels order. Use the OctoWS2811 constants
+    // The color ordering of the strip. Uses the OctoWS2811 constants
     uint8_t color_ordering;
     // The index of the pattern currently used by the strip
     uint32_t pattern_index;
+    // The color for non-palette patterns
+    CRGB single_color;
     // The index of the palette currently used by the strip
     uint32_t palette_index;
     // The period of the pattern update in milliseconds
     uint32_t update_period_ms;
     // The brightness of the strip
     uint8_t brightness;
-    // The color order of the strip. Uses the OctoWS2811 constants
-    uint8_t color_order;
 } led_string_t;
 
 //

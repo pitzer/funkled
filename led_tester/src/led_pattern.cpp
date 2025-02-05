@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
 // Set all the LEDs to the palette color, regardless of time
-void static_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* palette, uint32_t num_leds, CRGB* leds)
+void static_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* palette, CRGB single_color, uint32_t num_leds, CRGB* leds)
 {
     for (uint32_t i = 0; i < num_leds; i++) {
         uint8_t palette_index = i * 255 / num_leds;
@@ -11,7 +11,7 @@ void static_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* p
 }
 
 // Rotate all the LEDs on a palette
-void rotate_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* palette, uint32_t num_leds, CRGB* leds)
+void rotate_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* palette, CRGB single_color, uint32_t num_leds, CRGB* leds)
 {
     uint32_t offset = 255 - time_ms * 255 / period_ms;
     for (uint32_t i = 0; i < num_leds; i++) {
@@ -21,7 +21,7 @@ void rotate_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* p
 }
 
 // Fade all the LEDs on a palette
-void fade_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* palette, uint32_t num_leds, CRGB* leds)
+void fade_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* palette, CRGB single_color, uint32_t num_leds, CRGB* leds)
 {
     uint32_t fade_u32 = (time_ms * 512 / period_ms) % 512;
     if (fade_u32 >= 256) {
@@ -35,7 +35,7 @@ void fade_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* pal
 }
 
 // Blink all the LEDs on a palette
-void blink_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* palette, uint32_t num_leds, CRGB* leds)
+void blink_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16* palette, CRGB single_color, uint32_t num_leds, CRGB* leds)
 {
     bool on = time_ms % period_ms < period_ms / 2;
     for (uint32_t i = 0; i < num_leds; i++) {

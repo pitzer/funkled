@@ -10,9 +10,10 @@ typedef void (*led_pattern_func_t)(
     // The period to use for the pattern, in ms
     uint32_t period_ms,
     // The palette to use to render the LEDs. Can be
-    // potentially ignored by the pattern if it really wants to use
-    // its own palette.
+    // potentially ignored by the pattern if it wants to use a single color
     const CRGBPalette16* palette,
+    // The single color to use for the pattern, If it wants a single color
+    CRGB single_color,
     // The number of LEDs in the string
     uint32_t num_leds,
     // The array of LEDs to update

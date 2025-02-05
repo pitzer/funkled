@@ -11,17 +11,23 @@
 //
 static void colorwheel_pressed_cb(lv_event_t * e);
 static void slider_pressed_cb(lv_event_t * e);
-static void change_color(lv_obj_t* color_selector_w, lv_color_t color);
 
 //
 // Global functions
 //
-lv_obj_t* color_selector_create(lv_obj_t* parent) {
+lv_obj_t* color_selector_create(lv_obj_t* parent, color_changed_cb_t cb) {
     lv_obj_t* color_selector_w = lv_btn_create(parent);
+    // Use the widget user data to store the callback
+    lv_obj_set_user_data(color_selector_w, (void*) cb);
     static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, 7, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
     static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, 30, 30, 30, LV_GRID_TEMPLATE_LAST};
     lv_obj_set_grid_dsc_array(color_selector_w, grid_col_dsc, grid_row_dsc);
     lv_obj_add_flag(color_selector_w, LV_OBJ_FLAG_EVENT_BUBBLE);
+    lv_obj_set_style_bg_opa(color_selector_w, LV_OPA_0, 0);
+    lv_obj_set_style_pad_all(color_selector_w, 0, 0);
+    lv_obj_set_style_pad_right(color_selector_w, 10, 0);
+    lv_obj_set_style_border_opa(color_selector_w, LV_OPA_0, 0);
+    lv_obj_set_style_shadow_opa(color_selector_w, LV_OPA_0, 0);
     // The color wheel
     LV_IMAGE_DECLARE(img_colorwheel); 
     lv_obj_t* image_w = lv_image_create(color_selector_w);
@@ -108,7 +114,7 @@ static void slider_pressed_cb(lv_event_t * e) {
     }
 }
 
-static void change_color(lv_obj_t* color_selector_w, lv_color_t color) {
+void change_color(lv_obj_t* color_selector_w, lv_color_t color) {
     lv_obj_t* patch_w = lv_obj_get_child(color_selector_w, 1);
     lv_obj_t* patch_label_w = lv_obj_get_child(patch_w, 0);
     lv_obj_t* red_slider_w = lv_obj_get_child(color_selector_w, 2);
@@ -126,5 +132,8 @@ static void change_color(lv_obj_t* color_selector_w, lv_color_t color) {
     lv_slider_set_value(red_slider_w, color.red, LV_ANIM_ON);
     lv_slider_set_value(green_slider_w, color.green, LV_ANIM_ON);
     lv_slider_set_value(blue_slider_w, color.blue, LV_ANIM_ON);
+    // Call the callback
+    color_changed_cb_t cb = (color_changed_cb_t) lv_obj_get_user_data(color_selector_w);
+    cb(color);
 }
 

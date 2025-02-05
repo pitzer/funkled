@@ -26,18 +26,15 @@ static lv_obj_t* list_item_widget_create(
     const char* name,
     const char* desc,
     uint32_t channel,
-    const led_pattern_func_t pattern_update,
-    const CRGBPalette16* palette,
-    const uint32_t* period_ms,
-    const uint8_t* brightness,
-    bool use_color_selector
+    const led_bar_dsc_t* led_bar_dsc
 );
 static void pattern_clicked_cb(lv_event_t* e);
 static void palette_clicked_cb(lv_event_t* e);
 static void channel_clicked_cb(lv_event_t* e);
 static void brightness_pressed_cb(lv_event_t* e);
-static void color_order_changed_cb(lv_event_t* e);
+static void color_ordering_changed_cb(lv_event_t* e);
 static void file_menu_cb(uint32_t index);
+static void color_selector_cb(lv_color_t color);
 
 //
 // Static variables
@@ -63,7 +60,8 @@ static lv_obj_t* num_leds_w;
 static lv_obj_t* period_w;
 static lv_obj_t* brightness_w;
 static lv_obj_t* brightness_value_w;
-static lv_obj_t* color_order_w;
+static lv_obj_t* color_ordering_w;
+static lv_obj_t* color_selector_w;
 
 //
 // Global functions
@@ -116,16 +114,9 @@ void led_tester_ui(void)
     lv_obj_set_flex_flow(tab_channel_w, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_style(tab_channel_w, &style_list, 0);
     for (uint32_t i = 0; i < num_led_channels; i++) {
+        led_bar_dsc_t led_bar_dsc = {};
         lv_obj_t* channel_w = list_item_widget_create(
-            tab_channel_w,
-            String(i).c_str(),
-            NULL,
-            i,
-            NULL,
-            NULL,
-            NULL,
-            NULL,
-            false);
+            tab_channel_w, String(i).c_str(), NULL, i, &led_bar_dsc);
         lv_obj_add_event_cb(channel_w, channel_clicked_cb, LV_EVENT_CLICKED, (void*) i);
     }
 
@@ -136,16 +127,13 @@ void led_tester_ui(void)
     lv_obj_add_style(tab_pattern_w, &style_list, 0);
     for (uint32_t i = 0; i < num_led_patterns(); i++) {
         led_pattern_t* pattern = &led_patterns[i];
+        led_bar_dsc_t led_bar_dsc = {
+            .pattern_update = pattern->update,
+            .period_ms = &default_period_ms,
+            .brightness = &default_brightness
+        };
         lv_obj_t* pattern_w = list_item_widget_create(
-            tab_pattern_w,
-            pattern->name,
-            pattern->desc,
-            CHANNEL_CURRENT,
-            pattern->update,
-            NULL,
-            &default_period_ms,
-            &default_brightness,
-            false);
+            tab_pattern_w, pattern->name, pattern->desc, CHANNEL_CURRENT, &led_bar_dsc);
         lv_obj_add_event_cb(pattern_w, pattern_clicked_cb, LV_EVENT_CLICKED, (void*) i);
     }
 
@@ -154,20 +142,20 @@ void led_tester_ui(void)
     tab_color_w = lv_tabview_add_tab(tabview_w, color_str.c_str());
     lv_obj_set_flex_flow(tab_color_w, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_style(tab_color_w, &style_list, 0);
+    // First item is the solid color selector
+    color_selector_w = color_selector_create(tab_color_w, color_selector_cb);
+    // Then one button per palette
     for (uint32_t i = 0; i < num_led_palettes(); i++) {
         led_palette_t* palette = &led_palettes[i];
         // The first palette is the solid color one.
         // Add a color selector to be able to change it.
+        led_bar_dsc_t led_bar_dsc = {
+            .palette = palette,
+            .period_ms = &default_period_ms,
+            .brightness = &default_brightness
+        };
         lv_obj_t* palette_w = list_item_widget_create(
-            tab_color_w,
-            palette->name,
-            palette->desc,
-            CHANNEL_CURRENT,
-            NULL,
-            &palette->palette,
-            &default_period_ms,
-            &default_brightness,
-            String(palette->name) == "Solid");
+            tab_color_w, palette->name, palette->desc, CHANNEL_CURRENT, &led_bar_dsc);
         lv_obj_add_event_cb(palette_w, palette_clicked_cb, LV_EVENT_CLICKED, (void*) i);
     }
 
@@ -184,7 +172,8 @@ void led_tester_ui(void)
     lv_obj_add_style(channel_label_w, &style_title, 0);
     lv_obj_set_grid_cell(channel_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 0, 1);
     // LED bar
-    lv_obj_t* led_bar_w = led_bar_create(tab_params_w, 12, CHANNEL_CURRENT, NULL, NULL, NULL, NULL);
+    led_bar_dsc_t led_bar_dsc = {};
+    lv_obj_t* led_bar_w = led_bar_create(tab_params_w, 12, CHANNEL_CURRENT, &led_bar_dsc);
     lv_obj_set_grid_cell(led_bar_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
     // Number of LEDs
     lv_obj_t* num_leds_label_w = lv_label_create(tab_params_w);
@@ -201,15 +190,15 @@ void led_tester_ui(void)
     lv_obj_set_grid_cell(period_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 2, 1);
     lv_obj_set_grid_cell(period_w, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 2, 1);
     // Color ordering
-    lv_obj_t* color_order_label_w = lv_label_create(tab_params_w);
-    lv_label_set_text(color_order_label_w, "Color Order");
-    lv_obj_add_style(color_order_label_w, &style_text_muted, 0);
-    color_order_w = lv_dropdown_create(tab_params_w);
-    lv_dropdown_set_options(color_order_w, "RGB\nRBG\nGRB\nGBR\nBRG\nBGR\n");
-    lv_obj_set_width(color_order_w, 70);
-    lv_obj_add_event_cb(color_order_w, color_order_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_set_grid_cell(color_order_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 3, 1);
-    lv_obj_set_grid_cell(color_order_w, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
+    lv_obj_t* color_ordering_label_w = lv_label_create(tab_params_w);
+    lv_label_set_text(color_ordering_label_w, "Color Order");
+    lv_obj_add_style(color_ordering_label_w, &style_text_muted, 0);
+    color_ordering_w = lv_dropdown_create(tab_params_w);
+    lv_dropdown_set_options(color_ordering_w, "RGB\nRBG\nGRB\nGBR\nBRG\nBGR\n");
+    lv_obj_set_width(color_ordering_w, 70);
+    lv_obj_add_event_cb(color_ordering_w, color_ordering_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_set_grid_cell(color_ordering_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 3, 1);
+    lv_obj_set_grid_cell(color_ordering_w, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
     // Brightness
     lv_obj_t* brightness_label_w = lv_label_create(tab_params_w);
     lv_label_set_text(brightness_label_w, "Brightness");
@@ -242,16 +231,13 @@ static lv_obj_t* list_item_widget_create(
     const char* name,
     const char* desc,
     uint32_t channel,
-    const led_pattern_func_t pattern_update,
-    const CRGBPalette16* palette,
-    const uint32_t* period_ms,
-    const uint8_t* brightness,
-    bool use_color_selector
+    const led_bar_dsc_t* led_bar_dsc
 ) {
     // The top button widget
     lv_obj_t * btn_w = lv_btn_create(parent);
     lv_obj_add_style(btn_w, &style_list_button, LV_STATE_DEFAULT);
     lv_obj_add_style(btn_w, &style_list_button_checked, LV_STATE_CHECKED);
+
     // Different layouts if the description is present or not
     if (desc) {
         static int32_t grid_col_dsc[] = {LV_GRID_FR(30), LV_GRID_FR(70), LV_GRID_TEMPLATE_LAST};
@@ -280,18 +266,8 @@ static lv_obj_t* list_item_widget_create(
     }
 
     lv_obj_t* last_panel_w;
-    if (use_color_selector) {
-        // The color selector
-        last_panel_w = color_selector_create(btn_w);
-        lv_obj_set_style_bg_opa(last_panel_w, LV_OPA_0, 0);
-        lv_obj_set_style_pad_all(last_panel_w, 0, 0);
-        lv_obj_set_style_pad_right(last_panel_w, 10, 0);
-        lv_obj_set_style_border_opa(last_panel_w, LV_OPA_0, 0);
-        lv_obj_set_style_shadow_opa(last_panel_w, LV_OPA_0, 0);
-    } else {
-        // The led bar
-        last_panel_w = led_bar_create(btn_w, 16, channel, pattern_update, palette, period_ms, brightness);
-    }
+    // The led bar
+    last_panel_w = led_bar_create(btn_w, 16, channel, led_bar_dsc);
     lv_obj_set_width(last_panel_w, LV_PCT(100));
     if (desc) {
         lv_obj_set_grid_cell(last_panel_w, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_END, 1, 1);
@@ -310,59 +286,46 @@ static void pattern_clicked_cb(lv_event_t* e) {
     // Get the new pattern index
     uint32_t pattern_index = (uint32_t) lv_event_get_user_data(e);
     led_strings[current_channel].pattern_index = pattern_index;
-    // Unclick all the other buttons
+    // Uncheck all the buttons
     for (uint32_t i = 0; i < lv_obj_get_child_count(tab_pattern_w); i++) {
-        lv_obj_t* btn_w = lv_obj_get_child(tab_pattern_w, i);
-        if (i != pattern_index) {
-            lv_obj_clear_state(btn_w, LV_STATE_CHECKED);
-        } else {
-            lv_obj_add_state(btn_w, LV_STATE_CHECKED);
-        }
+        lv_obj_clear_state(lv_obj_get_child(tab_pattern_w, i), LV_STATE_CHECKED);
     }
+    // Check the target button
+    lv_obj_t* btn_w = lv_event_get_target_obj(e);
+    lv_obj_add_state(btn_w, LV_STATE_CHECKED);
 }
 
 static void palette_clicked_cb(lv_event_t* e) {
     // Get the new palette index
     uint32_t palette_index = (uint32_t) lv_event_get_user_data(e);
     led_strings[current_channel].palette_index = palette_index;
-    // Unclick all the other buttons
+    // Uncheck all the buttons
     for (uint32_t i = 0; i < lv_obj_get_child_count(tab_color_w); i++) {
-        lv_obj_t* btn_w = lv_obj_get_child(tab_color_w, i);
-        if (i != palette_index) {
-            lv_obj_clear_state(btn_w, LV_STATE_CHECKED);
-        } else {
-            lv_obj_add_state(btn_w, LV_STATE_CHECKED);
-        }
+        lv_obj_clear_state(lv_obj_get_child(tab_color_w, i), LV_STATE_CHECKED);
     }
-    // If the solid palette is selected, update its color
-    const char* name = led_palettes[palette_index].name;
-    if (String(name) == "Solid") {
-        lv_obj_t* btn_w = lv_obj_get_child(tab_color_w, palette_index);
-        lv_obj_t* color_selector_w = lv_obj_get_child(btn_w, 2);
-        lv_obj_t* patch_w = lv_obj_get_child(color_selector_w, 1);
-        lv_color_t color_lv = lv_obj_get_style_bg_color(patch_w, 0);
-        CRGB color_crgb = CRGB(color_lv.red, color_lv.green, color_lv.blue);
-        led_palettes[palette_index].palette = CRGBPalette16(color_crgb);
-    }
-
+    // Check the target button
+    lv_obj_t* btn_w = lv_event_get_target_obj(e);
+    lv_obj_add_state(btn_w, LV_STATE_CHECKED);
 }
 
 static void channel_clicked_cb(lv_event_t* e) {
     // Get the new channel index
     uint32_t channel = (uint32_t) lv_event_get_user_data(e);
     current_channel = channel;
-    // Unclick all the other buttons
+    // Uncheck all the buttons
     for (uint32_t i = 0; i < lv_obj_get_child_count(tab_channel_w); i++) {
-        lv_obj_t* btn_w = lv_obj_get_child(tab_channel_w, i);
-        if (i != channel) {
-            lv_obj_clear_state(btn_w, LV_STATE_CHECKED);
-        } else {
-            lv_obj_add_state(btn_w, LV_STATE_CHECKED);
-        }
+        lv_obj_clear_state(lv_obj_get_child(tab_channel_w, i), LV_STATE_CHECKED);
     }
+    // Check the target button
+    lv_obj_t* btn_w = lv_event_get_target_obj(e);
+    lv_obj_add_state(btn_w, LV_STATE_CHECKED);
+    // Update the color selector
+    CRGB color = led_strings[channel].single_color;
+    lv_color_t color_lv = lv_color_make(color.r, color.g, color.b);
+    change_color(color_selector_w, color_lv);
     // Update the pattern and palette buttons
     lv_obj_t* pattern_w = lv_obj_get_child(tab_pattern_w, led_strings[channel].pattern_index);
-    lv_obj_t* palette_w = lv_obj_get_child(tab_color_w, led_strings[channel].palette_index);
+    lv_obj_t* palette_w = lv_obj_get_child(tab_color_w, led_strings[channel].palette_index + 1);
     lv_obj_send_event(pattern_w, LV_EVENT_CLICKED, NULL);
     lv_obj_send_event(palette_w, LV_EVENT_CLICKED, NULL);
     // Update the parameters
@@ -371,7 +334,7 @@ static void channel_clicked_cb(lv_event_t* e) {
     lv_label_set_text(channel_label_w, ("Channel " + String(channel)).c_str());
     lv_slider_set_value(brightness_w, led_strings[channel].brightness, LV_ANIM_OFF);
     lv_label_set_text(brightness_value_w, String(led_strings[channel].brightness).c_str());
-    lv_dropdown_set_selected(color_order_w, led_strings[channel].color_order);
+    lv_dropdown_set_selected(color_ordering_w, led_strings[channel].color_ordering);
 }
 
 static void brightness_pressed_cb(lv_event_t* e) {
@@ -381,10 +344,10 @@ static void brightness_pressed_cb(lv_event_t* e) {
     led_strings[current_channel].brightness = brightness;
 }
 
-static void color_order_changed_cb(lv_event_t* e) {
+static void color_ordering_changed_cb(lv_event_t* e) {
     // Get the new order value
-    uint32_t order = lv_dropdown_get_selected(color_order_w);
-    led_strings[current_channel].color_order = order;
+    uint32_t order = lv_dropdown_get_selected(color_ordering_w);
+    led_strings[current_channel].color_ordering = order;
 }
 
 static void file_menu_cb(uint32_t index) {
@@ -396,12 +359,20 @@ static void file_menu_cb(uint32_t index) {
         case 1:
             // Load the saved configuration
             led_array_load();
+            // Select the first channel to update all the fields
+            lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
             break;
         case 2:
             // Reset the led array
             led_array_init();
-            // Select the first channel
+            // Select the first channel to update all the fields
             lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
             break;
     }
+}
+
+static void color_selector_cb(lv_color_t color) {
+    // Update the solid color for the current channel
+    CRGB color_crgb = CRGB(color.red, color.green, color.blue);
+    led_strings[current_channel].single_color = color_crgb;
 }

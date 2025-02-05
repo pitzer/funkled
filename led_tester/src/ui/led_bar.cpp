@@ -12,20 +12,12 @@
 typedef struct {
     // The horizontal grid descriptor array
     int32_t* grid_col_dsc;
-    // The FastLED LED array
-    CRGB* leds;
     // The channel index
     uint32_t channel;
-    // The pattern update function to use for the LEDs
-    led_pattern_func_t pattern_update;
-    // The palette to use for the LEDs
-    const CRGBPalette16* palette;
     // The number of LEDs in the array
     uint32_t num_leds;
-    // The pCRGBPalette32pattern
-    const uint32_t* period_ms;
-    // The brightness of the LEDs
-    const uint8_t* brightness;
+    // The information about the pattern
+    led_bar_dsc_t dsc;
 } led_bar_data_t;
 
 
@@ -44,10 +36,7 @@ lv_obj_t* led_bar_create(
         lv_obj_t* parent,
         uint32_t num_leds,
         uint32_t channel,
-        const led_pattern_func_t pattern_update,
-        const CRGBPalette16* palette,
-        const uint32_t* period_ms,
-        const uint8_t* brightness)
+        const led_bar_dsc_t* dsc)
 {
     lv_obj_t* led_bar_w = lv_obj_create(parent);
     // The grid descriptor arrays do not get copied by the lvgl library, so
@@ -75,13 +64,9 @@ lv_obj_t* led_bar_create(
     // Create a struct with all the internal data
     led_bar_data_t* led_data = new led_bar_data_t;
     led_data->grid_col_dsc = grid_col_dsc;
-    led_data->period_ms = period_ms;
-    led_data->brightness = brightness;
+    led_data->dsc = *dsc;
     led_data->channel = channel;
-    led_data->pattern_update = pattern_update;
-    led_data->palette = palette;
     led_data->num_leds = num_leds;
-    led_data->leds = new CRGB[num_leds];
     lv_obj_set_user_data(led_bar_w, led_data);
 
     // Create a timer for this LED bar
@@ -134,7 +119,6 @@ static void led_bar_delete_cb(lv_event_t * e) {
     lv_obj_t* led_bar_w = (lv_obj_t*) lv_event_get_target(e);
     led_bar_data_t* led_data = (led_bar_data_t*) lv_obj_get_user_data(led_bar_w);
     delete[] led_data->grid_col_dsc;
-    delete[] led_data->leds;
     delete led_data;
 }
 
@@ -150,29 +134,34 @@ static void led_bar_timer_cb(lv_timer_t * timer)
     if (channel == CHANNEL_CURRENT) {
         channel = current_channel;
     }
-    const CRGBPalette16* palette = led_bar_data->palette;
+    const led_palette_t* palette = led_bar_data->dsc.palette;
     if (palette == NULL) {
-        palette = &led_palettes[led_strings[channel].palette_index].palette;
+        palette = &led_palettes[led_strings[channel].palette_index];
     }
-    led_pattern_func_t pattern_update = led_bar_data->pattern_update;
+    CRGB color = led_strings[channel].single_color;
+    if (led_bar_data->dsc.single_color) {
+        color = *led_bar_data->dsc.single_color;
+    }
+    led_pattern_func_t pattern_update = led_bar_data->dsc.pattern_update;
     if (pattern_update == NULL) {
         pattern_update = led_patterns[led_strings[channel].pattern_index].update;
     }
     uint32_t period_ms = led_strings[channel].update_period_ms;
-    if (led_bar_data->period_ms) {
-        period_ms = *led_bar_data->period_ms;
+    if (led_bar_data->dsc.period_ms) {
+        period_ms = *led_bar_data->dsc.period_ms;
     }
     uint8_t brightness = led_strings[channel].brightness;
-    if (led_bar_data->brightness) {
-        brightness = *led_bar_data->brightness;
+    if (led_bar_data->dsc.brightness) {
+        brightness = *led_bar_data->dsc.brightness;
     }
     uint32_t time_ms = millis();
-    pattern_update(time_ms, period_ms, palette, led_bar_data->num_leds, led_bar_data->leds);
+    CRGB leds[led_bar_data->num_leds];
+    pattern_update(time_ms, period_ms, composed_palette(palette, color), color, led_bar_data->num_leds, leds);
 
     // Update the LEDs
     for (uint32_t i = 0; i < led_bar_data->num_leds; i++) {
         lv_obj_t* led = lv_obj_get_child(led_bar_w, i);
-        CRGB color_crgb = led_bar_data->leds[i];
+        CRGB color_crgb = leds[i];
         color_crgb.nscale8(brightness);
         // Apply some simple gamma correction, to make the LEDs more realistic looking
         color_crgb = applyGamma_video (color_crgb, 0.35);
