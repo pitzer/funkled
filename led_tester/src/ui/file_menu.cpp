@@ -55,21 +55,27 @@ lv_obj_t* menu_item_create(lv_obj_t* parent, uint32_t index, const char* image, 
     return item_w;
 }
 
+static void animate_menu(lv_obj_t* menu_cont_w) {
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, menu_cont_w);
+    lv_anim_set_exec_cb(&a, file_menu_anim_cb);
+    if (lv_obj_get_width(menu_cont_w) < LV_HOR_RES / 2) {
+        lv_anim_set_values(&a, 0, 256);
+    } else {
+        lv_anim_set_values(&a, 256, 0);
+    }
+    lv_anim_set_duration(&a, 200);
+    lv_anim_start(&a);
+}
+
 void menu_item_event_cb(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t* obj = (lv_obj_t*) lv_event_get_target(e);
 
     if(code == LV_EVENT_FOCUSED) {
         lv_obj_t * menu_cont_w = lv_obj_get_parent(obj);
-        if(lv_obj_get_width(menu_cont_w) < LV_HOR_RES / 2) {
-            lv_anim_t a;
-            lv_anim_init(&a);
-            lv_anim_set_var(&a, menu_cont_w);
-            lv_anim_set_exec_cb(&a, file_menu_anim_cb);
-            lv_anim_set_values(&a, 0, 256);
-            lv_anim_set_duration(&a, 200);
-            lv_anim_start(&a);
-        }
+        animate_menu(menu_cont_w);
     }
     else if(code == LV_EVENT_CLICKED) {
         file_menu_cb_t cb = (file_menu_cb_t) lv_event_get_user_data(e);
@@ -95,23 +101,6 @@ static void file_menu_anim_cb(void * var, int32_t v) {
 static void file_menu_event_cb(lv_event_t * e) {
     if(lv_event_get_code(e) == LV_EVENT_CLICKED) {
         lv_obj_t * menu_cont_w = (lv_obj_t*) lv_event_get_user_data(e);
-        if(lv_obj_get_width(menu_cont_w) < LV_HOR_RES / 2) {
-            lv_anim_t a;
-            lv_anim_init(&a);
-            lv_anim_set_var(&a, menu_cont_w);
-            lv_anim_set_exec_cb(&a, file_menu_anim_cb);
-            lv_anim_set_values(&a, 0, 256);
-            lv_anim_set_duration(&a, 200);
-            lv_anim_start(&a);
-        }
-        else {
-            lv_anim_t a;
-            lv_anim_init(&a);
-            lv_anim_set_var(&a, menu_cont_w);
-            lv_anim_set_exec_cb(&a, file_menu_anim_cb);
-            lv_anim_set_values(&a, 256, 0);
-            lv_anim_set_duration(&a, 200);
-            lv_anim_start(&a);
-        }
+        animate_menu(menu_cont_w);
     }
 }
