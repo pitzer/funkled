@@ -17,6 +17,10 @@ FT6336U ft6336u(TOUCH_SDA_PIN, TOUCH_SCL_PIN, TOUCH_RST_PIN, TOUCH_INT_PIN);
 // Backlight
 #define BACKLIGHT_PIN 29
 
+// Status LED
+#define STATUS_RED 33
+#define STATUS_GREEN 32
+
 // LEDs
 #define LED_REFRESH_RATE_HZ 20
 const uint8_t pin_list [] = { 28, 24, 15, 7, 5, 3, 2, 1, 25, 14, 8, 6, 4, 22, 23,  0};
@@ -58,6 +62,12 @@ static void led_refresh_cb(lv_timer_t * timer);
 // The main setup function
 //
 void setup() {
+  // Status LED
+  pinMode(STATUS_RED, OUTPUT);
+  pinMode(STATUS_GREEN, OUTPUT);
+  digitalWrite(STATUS_RED, HIGH);
+  digitalWrite(STATUS_GREEN, HIGH);
+
   // Serial port
   Serial.begin( 115200 );
   String lvgl_ver = "LVGL ";
@@ -99,8 +109,6 @@ void setup() {
   // Initialize the led array descriptors
   led_array_init();
 
-  Serial.println( "Setup done" );
-
   // Build the UI
   led_tester_ui();
 
@@ -109,6 +117,12 @@ void setup() {
 
   // Register the refresh function. We are going to use an LVGL timer to call this function.
   lv_timer_create(led_refresh_cb, 1000 / LED_REFRESH_RATE_HZ, NULL);
+
+  // We are done
+  Serial.println( "Setup done" );
+  digitalWrite(STATUS_GREEN, HIGH);
+  digitalWrite(STATUS_RED, LOW);
+
 }
 
 

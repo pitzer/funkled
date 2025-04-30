@@ -34,6 +34,7 @@ lv_obj_t* color_selector_create(lv_obj_t* parent, color_changed_cb_t cb) {
     lv_image_set_src(image_w, &img_colorwheel);
     lv_obj_set_grid_cell(image_w, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 0, 4);
     lv_obj_add_event_cb(color_selector_w, colorwheel_pressed_cb, LV_EVENT_PRESSING, color_selector_w);
+    lv_obj_add_event_cb(color_selector_w, colorwheel_pressed_cb, LV_EVENT_RELEASED, color_selector_w);
     lv_obj_add_flag(image_w, LV_OBJ_FLAG_EVENT_BUBBLE);
     // The color patch
     lv_obj_t* patch_w = lv_obj_create(color_selector_w);
@@ -62,56 +63,50 @@ lv_obj_t* color_selector_create(lv_obj_t* parent, color_changed_cb_t cb) {
 // Private callbacks
 //
 static void colorwheel_pressed_cb(lv_event_t * e) {
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_PRESSING) {
-        lv_indev_t * indev = lv_indev_active();
-        if(indev == NULL) return;
-        lv_indev_type_t indev_type = lv_indev_get_type(indev);
-        if(indev_type != LV_INDEV_TYPE_POINTER) return;
-        lv_point_t p;
-        lv_indev_get_point(indev, &p);
-        // Get coordinates relative to the center of the image
-        lv_obj_t* color_selector_w = (lv_obj_t*) lv_event_get_user_data(e);
-        lv_obj_t* image_w = lv_obj_get_child(color_selector_w, 0);
-        lv_area_t image_coords;
-        lv_obj_get_coords(image_w, &image_coords);
-        p.x -= image_coords.x1;
-        p.y -= image_coords.y1;
-        // Get the pixel color and alpha
-        lv_image_dsc_t* image_dcs = (lv_image_dsc_t*) lv_image_get_src(image_w);
-        if (image_dcs->header.cf != LV_COLOR_FORMAT_RGB565A8) {
-            return;
-        }
-        if (p.x < 0 || p.y < 0 || p.x >= image_dcs->header.w || p.y >= image_dcs->header.h) {
-            return;
-        }
-        uint32_t offset_rgb = (p.y * image_dcs->header.w + p.x) * 2;
-        uint32_t offset_alpha = image_dcs->header.w * image_dcs->header.h * 2 + p.y * image_dcs->header.w + p.x;
-        uint8_t alpha = image_dcs->data[offset_alpha];
-        if (alpha == 0) {
-            return;
-        }
-        uint16_t rgb = image_dcs->data[offset_rgb] | (image_dcs->data[offset_rgb + 1] << 8);
-        uint8_t r = (rgb & 0xF800) >> 8;
-        uint8_t g = (rgb & 0x07E0) >> 3;
-        uint8_t b = (rgb & 0x001F) << 3;
-        lv_color_t color = lv_color_make(r, g, b);
-        change_color(color_selector_w, color);
+    lv_indev_t * indev = lv_indev_active();
+    if(indev == NULL) return;
+    lv_indev_type_t indev_type = lv_indev_get_type(indev);
+    if(indev_type != LV_INDEV_TYPE_POINTER) return;
+    lv_point_t p;
+    lv_indev_get_point(indev, &p);
+    // Get coordinates relative to the center of the image
+    lv_obj_t* color_selector_w = (lv_obj_t*) lv_event_get_user_data(e);
+    lv_obj_t* image_w = lv_obj_get_child(color_selector_w, 0);
+    lv_area_t image_coords;
+    lv_obj_get_coords(image_w, &image_coords);
+    p.x -= image_coords.x1;
+    p.y -= image_coords.y1;
+    // Get the pixel color and alpha
+    lv_image_dsc_t* image_dcs = (lv_image_dsc_t*) lv_image_get_src(image_w);
+    if (image_dcs->header.cf != LV_COLOR_FORMAT_RGB565A8) {
         return;
     }
+    if (p.x < 0 || p.y < 0 || p.x >= image_dcs->header.w || p.y >= image_dcs->header.h) {
+        return;
+    }
+    uint32_t offset_rgb = (p.y * image_dcs->header.w + p.x) * 2;
+    uint32_t offset_alpha = image_dcs->header.w * image_dcs->header.h * 2 + p.y * image_dcs->header.w + p.x;
+    uint8_t alpha = image_dcs->data[offset_alpha];
+    if (alpha == 0) {
+        return;
+    }
+    uint16_t rgb = image_dcs->data[offset_rgb] | (image_dcs->data[offset_rgb + 1] << 8);
+    uint8_t r = (rgb & 0xF800) >> 8;
+    uint8_t g = (rgb & 0x07E0) >> 3;
+    uint8_t b = (rgb & 0x001F) << 3;
+    lv_color_t color = lv_color_make(r, g, b);
+    change_color(color_selector_w, color);
+    return;
 }
 
 static void slider_pressed_cb(lv_event_t * e) {
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_PRESSING) {
-        lv_obj_t* color_selector_w = (lv_obj_t*) lv_event_get_user_data(e);
-        lv_obj_t* red_slider_w = lv_obj_get_child(color_selector_w, 2);
-        lv_obj_t* green_slider_w = lv_obj_get_child(color_selector_w, 3);
-        lv_obj_t* blue_slider_w = lv_obj_get_child(color_selector_w, 4);
-        lv_color_t color = lv_color_make(lv_slider_get_value(red_slider_w), lv_slider_get_value(green_slider_w), lv_slider_get_value(blue_slider_w));
-        change_color(color_selector_w, color);
-        return;
-    }
+    lv_obj_t* color_selector_w = (lv_obj_t*) lv_event_get_user_data(e);
+    lv_obj_t* red_slider_w = lv_obj_get_child(color_selector_w, 2);
+    lv_obj_t* green_slider_w = lv_obj_get_child(color_selector_w, 3);
+    lv_obj_t* blue_slider_w = lv_obj_get_child(color_selector_w, 4);
+    lv_color_t color = lv_color_make(lv_slider_get_value(red_slider_w), lv_slider_get_value(green_slider_w), lv_slider_get_value(blue_slider_w));
+    change_color(color_selector_w, color);
+    return;
 }
 
 void change_color(lv_obj_t* color_selector_w, lv_color_t color) {
