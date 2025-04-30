@@ -14,6 +14,9 @@
 #define TOUCH_SDA_PIN 18
 FT6336U ft6336u(TOUCH_SDA_PIN, TOUCH_SCL_PIN, TOUCH_RST_PIN, TOUCH_INT_PIN);
 
+// Backlight
+#define BACKLIGHT_PIN 29
+
 // LEDs
 #define LED_REFRESH_RATE_HZ 20
 const uint8_t pin_list [] = { 28, 24, 15, 7, 5, 3, 2, 1, 25, 14, 8, 6, 4, 22, 23,  0};
@@ -34,7 +37,7 @@ OctoWS2811 leds(max_leds_per_channel, display_memory, drawing_memory, config, nu
   #define TFT_HOR_RES   320
   #define TFT_VER_RES   480
 #endif
-#define TFT_ROTATION  LV_DISPLAY_ROTATION_270
+#define TFT_ROTATION  LV_DISPLAY_ROTATION_90
 
 // LVGL draws into these buffers (This is double buffered)
 // Ref: https://docs.lvgl.io/8.0/porting/display.html
@@ -68,6 +71,10 @@ void setup() {
   String touch_ver = "FT6336U ";
   touch_ver += String('V') + ft6336u.read_firmware_id() + String('M') + ft6336u.read_device_mode();
   Serial.println( touch_ver );
+
+  // Backlight
+  pinMode(BACKLIGHT_PIN, OUTPUT);
+  digitalWrite(BACKLIGHT_PIN, HIGH);
 
   // Init LVGL core
   lv_init();
