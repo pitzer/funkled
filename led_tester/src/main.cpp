@@ -5,6 +5,7 @@
 #include <TFT_eSPI.h>
 #include <FT6336U.h>
 #include <OctoWS2811.h>
+#include <Wire.h>
 
 
 // Touchscreen
@@ -76,6 +77,8 @@ void setup() {
 
   // Touchscreen
   ft6336u.begin();
+  Wire.setClock(100000); // Slow down the I2C a little to make it more robust.
+
   // Set the interrupt to polling mode (low when there is a touch, high otherwise)
   ft6336u.write_g_mode(pollingMode);
   String touch_ver = "FT6336U ";
