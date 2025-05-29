@@ -50,6 +50,7 @@ static lv_style_t style_title;
 static lv_style_t style_list;
 static lv_style_t style_list_button;
 static lv_style_t style_list_button_checked;
+static lv_style_t style_list_button_focused;
 // Tabs
 static lv_obj_t* tabview_w;
 static lv_obj_t* tab_pattern_w;
@@ -77,6 +78,24 @@ void led_tester_ui(void)
     lv_theme_default_init(NULL, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED), LV_THEME_DEFAULT_DARK,
                           font_normal);
 
+    // Figure out which input devices we have, and assign them to a group
+    lv_group_t * encoder_groups[4] = {
+        lv_group_create(),
+        lv_group_create(),
+        lv_group_create(),
+        lv_group_create()
+    };
+    for (lv_indev_t * indev = lv_indev_get_next(NULL); indev != NULL; indev = lv_indev_get_next(indev)) {
+        if (lv_indev_get_type(indev) == LV_INDEV_TYPE_ENCODER) {
+            // Get the encoder index from the user data
+            uint32_t encoder_index = (uint32_t) lv_indev_get_user_data(indev);
+            // Add the input device to the corresponding group
+            lv_indev_set_group(indev, encoder_groups[encoder_index]);
+            // Disable wrapping for the group
+            lv_group_set_wrap(encoder_groups[encoder_index], false);
+        }
+    }
+
     // Styles
     // Muted text
     lv_style_init(&style_text_muted);
@@ -97,10 +116,13 @@ void led_tester_ui(void)
     lv_style_set_pad_gap(&style_list_button, 10);
     lv_style_set_height(&style_list_button, LV_SIZE_CONTENT);
     lv_style_set_width(&style_list_button, LV_PCT(97));
+
     lv_style_init(&style_list_button_checked);
     lv_style_set_border_width(&style_list_button_checked, 2);
     lv_style_set_bg_opa(&style_list_button_checked, 35);
     lv_style_set_text_color(&style_list_button_checked, lv_color_hex(0x202020));
+    lv_style_init(&style_list_button_focused);
+    lv_style_set_border_width(&style_list_button_focused, 4);
 
     // Create the top level tab view
     tabview_w = lv_tabview_create(lv_screen_active());
@@ -120,6 +142,8 @@ void led_tester_ui(void)
         lv_obj_t* channel_w = list_item_widget_create(
             tab_channel_w, String(i).c_str(), NULL, i, &led_bar_dsc);
         lv_obj_add_event_cb(channel_w, channel_clicked_cb, LV_EVENT_CLICKED, (void*) i);
+        // Assign to the first encoder
+        lv_group_add_obj(encoder_groups[0], channel_w);
     }
 
     // Second tab: patterns
@@ -137,6 +161,8 @@ void led_tester_ui(void)
         lv_obj_t* pattern_w = list_item_widget_create(
             tab_pattern_w, pattern->name, pattern->desc, CHANNEL_CURRENT, &led_bar_dsc);
         lv_obj_add_event_cb(pattern_w, pattern_clicked_cb, LV_EVENT_CLICKED, (void*) i);
+        // Assign to the second encoder
+        lv_group_add_obj(encoder_groups[1], pattern_w);
     }
 
     // Third tab: colors
@@ -146,6 +172,7 @@ void led_tester_ui(void)
     lv_obj_add_style(tab_color_w, &style_list, 0);
     // First item is the solid color selector
     color_selector_w = color_selector_create(tab_color_w, color_selector_cb);
+    lv_group_add_obj(encoder_groups[2], color_selector_w);
     // Then one button per palette
     for (uint32_t i = 0; i < num_led_palettes(); i++) {
         led_palette_t* palette = &led_palettes[i];
@@ -159,6 +186,8 @@ void led_tester_ui(void)
         lv_obj_t* palette_w = list_item_widget_create(
             tab_color_w, palette->name, palette->desc, CHANNEL_CURRENT, &led_bar_dsc);
         lv_obj_add_event_cb(palette_w, palette_clicked_cb, LV_EVENT_CLICKED, (void*) i);
+        // Assign to the third encoder
+        lv_group_add_obj(encoder_groups[2], palette_w);
     }
 
     // Fourth tab: parameters
@@ -253,6 +282,7 @@ static lv_obj_t* list_item_widget_create(
     lv_obj_t * btn_w = lv_btn_create(parent);
     lv_obj_add_style(btn_w, &style_list_button, LV_STATE_DEFAULT);
     lv_obj_add_style(btn_w, &style_list_button_checked, LV_STATE_CHECKED);
+    lv_obj_add_style(btn_w, &style_list_button_focused, LV_STATE_FOCUSED);
 
     // Different layouts if the description is present or not
     if (desc) {

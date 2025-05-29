@@ -6,6 +6,7 @@
 #include <FT6336U.h>
 #include <OctoWS2811.h>
 #include <Wire.h>
+#include <Adafruit_seesaw.h>
 
 
 // Touchscreen
@@ -32,6 +33,11 @@ uint8_t drawing_memory[max_leds * bytes_per_led];
 const uint8_t config = WS2811_RGB | WS2811_800kHz;
 OctoWS2811 leds(max_leds_per_channel, display_memory, drawing_memory, config, num_led_channels, pin_list);
 
+// Quad encoder extension board
+#define ENCODERS_ADDR 0x49
+#define NUM_ENCODERS 4 // Number of encoders
+const int SS_ENC_SWITCH_PIN[NUM_ENCODERS] = {12, 14, 17, 9}; // The pins for the encoder switches
+Adafruit_seesaw encoders(&Wire);
 
 // Screen resolution and rotation
 #ifdef HOSYOND_3_2_TFT
@@ -57,6 +63,7 @@ static lv_color_t draw_buf[DRAW_BUF_SIZE];
 static uint32_t lv_tick(void);
 static void lv_print( lv_log_level_t level, const char * buf );
 static void lv_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data );
+static void lv_encoder_read( lv_indev_t * indev, lv_indev_data_t * data );
 static void led_refresh_cb(lv_timer_t * timer);
 
 //
@@ -77,7 +84,17 @@ void setup() {
 
   // Touchscreen
   ft6336u.begin();
-  Wire.setClock(100000); // Slow down the I2C a little to make it more robust.
+
+  // Quad encoders
+  if (!encoders.begin(ENCODERS_ADDR)) {
+    Serial.println("Failed to initialize the quad encoders");
+  } else {
+    Serial.println("Quad encoders initialized");
+  }
+  for (int i = 0; i < NUM_ENCODERS; i++) {
+    // Set the switch pins to INPUT_PULLUP
+    encoders.pinMode(SS_ENC_SWITCH_PIN[i], INPUT_PULLUP);
+  }
 
   // Set the interrupt to polling mode (low when there is a touch, high otherwise)
   ft6336u.write_g_mode(pollingMode);
@@ -105,10 +122,19 @@ void setup() {
 
   // There is no native support for the FT6336U chip in LVGL, so we use
   // a dummy driver, and we will implement the touch callback ourselves.
-  lv_indev_t * indev = lv_indev_create();
-  lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
-  lv_indev_set_read_cb(indev, lv_touchpad_read);
+  lv_indev_t * touchpad = lv_indev_create();
+  lv_indev_set_type(touchpad, LV_INDEV_TYPE_POINTER);
+  lv_indev_set_read_cb(touchpad, lv_touchpad_read);
 
+  // Create an input device for each encoder
+  lv_indev_t * encoders[NUM_ENCODERS];
+  for (uint32_t i = 0; i < NUM_ENCODERS; i++) {
+    encoders[i] = lv_indev_create();
+    lv_indev_set_type(encoders[i], LV_INDEV_TYPE_ENCODER);
+    lv_indev_set_read_cb(encoders[i], lv_encoder_read);
+    lv_indev_set_user_data(encoders[i], (void*) i); // Store the encoder index in the user data
+  }
+  
   // Initialize the led array descriptors
   led_array_init();
 
@@ -118,7 +144,7 @@ void setup() {
   // Start the LEDs
   leds.begin();
 
-  // Register the refresh function. We are going to use an LVGL timer to call this function.
+  // Register the LED refresh function. We are going to use an LVGL timer to call this function.
   lv_timer_create(led_refresh_cb, 1000 / LED_REFRESH_RATE_HZ, NULL);
 
   // We are done
@@ -191,6 +217,18 @@ static void lv_touchpad_read( lv_indev_t * indev, lv_indev_data_t * data )
       data->point.y = tp.tp[0].y;
       break;
   }
+}
+
+// Provides LVGL with access to the encoder
+// This is polled on a regular basis
+static void lv_encoder_read( lv_indev_t * indev, lv_indev_data_t * data )
+{
+  // Figure out the encoder index from the user data
+  uint32_t encoder_index = (uint32_t) lv_indev_get_user_data(indev);
+  // Read the switch state
+  data->state = encoders.digitalRead(SS_ENC_SWITCH_PIN[encoder_index]) ? LV_INDEV_STATE_REL : LV_INDEV_STATE_PR;
+  // Read the encoder delta
+  data->enc_diff = -encoders.getEncoderDelta(encoder_index);
 }
 
 // Refresh the LEDs
