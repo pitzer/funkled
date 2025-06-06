@@ -8,6 +8,8 @@
 //
 // Static prototypes
 //
+static void composite_image_timer_cb(lv_timer_t * timer);
+static void composite_image_update(const composite_image_dsc_t* dsc);
 
 //
 // Global functions
@@ -24,13 +26,24 @@ lv_obj_t* composite_image_create(lv_obj_t* parent, const composite_image_dsc_t* 
             return NULL; // Invalid layer image
         }
     }
-
     lv_obj_t* canvas_w = lv_canvas_create(parent);
+    lv_memset(dsc->buffer, 0, dsc->background_image_dsc.header.w * dsc->background_image_dsc.header.h * 3);
     lv_canvas_set_buffer(canvas_w, dsc->buffer, dsc->background_image_dsc.header.w, dsc->background_image_dsc.header.h, LV_COLOR_FORMAT_RGB888);
 
+    // Use the user data of the canvas to store the composite image descriptor
+    lv_obj_set_user_data(canvas_w, (void*) dsc);
+
+    // Create a timer to update the composite image
+    lv_timer_create(composite_image_timer_cb, 20, canvas_w);
+
+    return canvas_w;
+}
+
+// Update the canvas with the composite image
+void composite_image_update(const composite_image_dsc_t* dsc) {
     for (uint32_t y = 0; y < dsc->background_image_dsc.header.h; y++) {
         for (uint32_t x = 0; x < dsc->background_image_dsc.header.w; x++) {
-            uint32_t layer_index = y + x * dsc->background_image_dsc.header.w;
+            uint32_t layer_index = x + y * dsc->background_image_dsc.header.w;
             uint32_t canvas_index = layer_index * 3;
             uint16_t r = dsc->background_image_dsc.data[canvas_index + 2];
             uint16_t g = dsc->background_image_dsc.data[canvas_index + 1];
@@ -53,19 +66,40 @@ lv_obj_t* composite_image_create(lv_obj_t* parent, const composite_image_dsc_t* 
             dsc->buffer[canvas_index + 0] = b;
         }
     }
+}
 
- //               
- //               // Get the background pixel value
- //               lv_color_t bg_pixel = lv_canvas_get_px(canvas_w, x, y);
- //               // Compose the pixel with the layer color
- //               lv_color_t new_pixel = lv_color_mix(bg_pixel, layer->color, layer_pixel);
- //               // Set the new pixel value on the canvas
- //               lv_canvas_set_px(canvas_w, x, y, new_pixel);
- //           }
- //       }
+static void composite_image_timer_cb(lv_timer_t * timer)
+{
+    // Get the user data
+    lv_obj_t* canvas_w = (lv_obj_t*) lv_timer_get_user_data(timer);
+    composite_image_dsc_t* dsc = (composite_image_dsc_t*) lv_obj_get_user_data(canvas_w);
 
- //   }
+    uint32_t p1 = (lv_tick_get() / 10) % 512;
+    if (p1 > 255) {
+        p1 = 511 - p1;
+    }
+    uint32_t p2 = (lv_tick_get() / 8 + 128) % 512;
+    if (p2 > 255) {
+        p2 = 511 - p2;
+    }
+    uint32_t p3 = (lv_tick_get() / 12 + 196) % 512;
+    if (p3 > 255) {
+        p3 = 511 - p3;
+    }
+    uint32_t p4 = (lv_tick_get() / 7 + 64) % 512;
+    if (p4 > 255) {
+        p4 = 511 - p4;
+    }
 
+    dsc->layers[0].color.red = p1;
+    dsc->layers[1].color.blue = p2;
+    dsc->layers[2].color.green = p3;
+    dsc->layers[3].color.red = p4;
 
-    return canvas_w;
+    // Update the composite image
+    uint32_t tic = lv_tick_get();
+    composite_image_update(dsc);
+    lv_obj_invalidate(canvas_w);
+    uint32_t toc = lv_tick_get();
+    LV_LOG_INFO("Composite image updated in %lu ms", toc - tic);
 }

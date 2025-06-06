@@ -76,16 +76,16 @@ LV_IMAGE_DECLARE(headboard);
 static composite_image_layer_t layers[] = {
     {
         .image_dsc = cage,
-        .color = lv_color_hex(0x0000FF)
+        .color = lv_color_hex(0x000000)
     }, {
         .image_dsc = center,
-        .color = lv_color_hex(0x00FF00)
+        .color = lv_color_hex(0x000000)
     }, {
         .image_dsc = front,
         .color = lv_color_hex(0x000000)
     }, {
         .image_dsc = headboard,
-        .color = lv_color_hex(0xFF0000)
+        .color = lv_color_hex(0x000000)
     }
 };
 static DMAMEM uint8_t composite_buffer[TFT_HOR_RES * TFT_VER_RES * 3];
