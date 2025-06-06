@@ -1,5 +1,5 @@
-#ifndef LV_TESTER_UI_H
-#define LV_TESTER_UI_H
+#ifndef IS_BED_UI_H
+#define IS_BED_UI_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,11 +15,11 @@ extern "C" {
 #error "LV_USE_FLEX needs to be enabled"
 #endif
 
-// Create a complete UI for the LED tester
-void led_tester_ui(void);
+// Create a complete UI for the IS Bed
+void is_bed_ui(void);
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
-#endif /*LV_TESTER_UI_H*/
+#endif /*IS_BED_UI_H*/

@@ -33,17 +33,6 @@ const uint8_t config = WS2811_RGB | WS2811_800kHz;
 OctoWS2811 leds(max_leds_per_channel, display_memory, drawing_memory, config, num_led_channels, pin_list);
 
 
-// Screen resolution and rotation
-#ifdef HOSYOND_3_2_TFT
-  #define TFT_HOR_RES   240
-  #define TFT_VER_RES   320
-#endif
-#ifdef HOSYOND_4_0_TFT
-  #define TFT_HOR_RES   320
-  #define TFT_VER_RES   480
-#endif
-#define TFT_ROTATION  LV_DISPLAY_ROTATION_90
-
 // LVGL draws into these buffers (This is double buffered)
 // Ref: https://docs.lvgl.io/8.0/porting/display.html
 // "A larger buffer results in better performance but above 1/10 screen

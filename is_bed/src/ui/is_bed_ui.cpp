@@ -1,4 +1,5 @@
-#include "led_tester_ui.h"
+#include "is_bed_ui.h"
+#include "composite_image.h"
 #include "color_selector.h"
 #include "led_bar.h"
 #include "led_pattern.h"
@@ -66,11 +67,43 @@ static lv_obj_t* brightness_value_w;
 static lv_obj_t* color_ordering_w;
 static lv_obj_t* color_selector_w;
 
+// The composite image of the bed
+LV_IMAGE_DECLARE(background);
+LV_IMAGE_DECLARE(cage);
+LV_IMAGE_DECLARE(center);
+LV_IMAGE_DECLARE(front);
+LV_IMAGE_DECLARE(headboard);
+static composite_image_layer_t layers[] = {
+    {
+        .image_dsc = cage,
+        .color = lv_color_hex(0x0000FF)
+    }, {
+        .image_dsc = center,
+        .color = lv_color_hex(0x00FF00)
+    }, {
+        .image_dsc = front,
+        .color = lv_color_hex(0x000000)
+    }, {
+        .image_dsc = headboard,
+        .color = lv_color_hex(0xFF0000)
+    }
+};
+static DMAMEM uint8_t composite_buffer[TFT_HOR_RES * TFT_VER_RES * 3];
+static composite_image_dsc_t composite_dsc = {
+    .buffer = composite_buffer,
+    .background_image_dsc = background,
+    .layers = layers,
+    .layer_count = sizeof(layers) / sizeof(layers[0])
+};
+
+
+
+
 //
 // Global functions
 //
 
-void led_tester_ui(void)
+void is_bed_ui(void)
 {
     font_large = &lv_font_montserrat_16;
     font_normal = &lv_font_montserrat_12;
@@ -124,122 +157,125 @@ void led_tester_ui(void)
     lv_style_init(&style_list_button_focused);
     lv_style_set_border_width(&style_list_button_focused, 4);
 
-    // Create the top level tab view
-    tabview_w = lv_tabview_create(lv_screen_active());
-    lv_tabview_set_tab_bar_size(tabview_w, tab_h);
-    lv_obj_set_style_text_font(lv_screen_active(), font_normal, 0);
+    lv_obj_t* background_image = composite_image_create(lv_screen_active(), &composite_dsc);
+    //return;
 
-    // A keyboard to fill in numbers
-    number_keyboard_init();
-
-    // First tab: channel
-    String system_str = String(LV_SYMBOL_LIST) + " Channel";
-    tab_channel_w = lv_tabview_add_tab(tabview_w, system_str.c_str());
-    lv_obj_set_flex_flow(tab_channel_w, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_style(tab_channel_w, &style_list, 0);
-    for (uint32_t i = 0; i < num_led_channels; i++) {
-        led_bar_dsc_t led_bar_dsc = {};
-        lv_obj_t* channel_w = list_item_widget_create(
-            tab_channel_w, String(i).c_str(), NULL, i, &led_bar_dsc);
-        lv_obj_add_event_cb(channel_w, channel_clicked_cb, LV_EVENT_CLICKED, (void*) i);
-        // Assign to the first encoder
-        lv_group_add_obj(encoder_groups[0], channel_w);
-    }
-
-    // Second tab: patterns
-    String pattern_str = String(LV_SYMBOL_LOOP) + " Pattern";
-    tab_pattern_w = lv_tabview_add_tab(tabview_w, pattern_str.c_str());
-    lv_obj_set_flex_flow(tab_pattern_w, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_style(tab_pattern_w, &style_list, 0);
-    for (uint32_t i = 0; i < num_led_patterns(); i++) {
-        led_pattern_t* pattern = &led_patterns[i];
-        led_bar_dsc_t led_bar_dsc = {
-            .pattern_update = pattern->update,
-            .period_ms = &default_period_ms,
-            .brightness = &default_brightness
-        };
-        lv_obj_t* pattern_w = list_item_widget_create(
-            tab_pattern_w, pattern->name, pattern->desc, CHANNEL_CURRENT, &led_bar_dsc);
-        lv_obj_add_event_cb(pattern_w, pattern_clicked_cb, LV_EVENT_CLICKED, (void*) i);
-        // Assign to the second encoder
-        lv_group_add_obj(encoder_groups[1], pattern_w);
-    }
-
-    // Third tab: colors
-    String color_str = String(LV_SYMBOL_TINT) + " Color";
-    tab_color_w = lv_tabview_add_tab(tabview_w, color_str.c_str());
-    lv_obj_set_flex_flow(tab_color_w, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_style(tab_color_w, &style_list, 0);
-    // First item is the solid color selector
-    color_selector_w = color_selector_create(tab_color_w, color_selector_cb);
-    lv_group_add_obj(encoder_groups[2], color_selector_w);
-    // Then one button per palette
-    for (uint32_t i = 0; i < num_led_palettes(); i++) {
-        led_palette_t* palette = &led_palettes[i];
-        // The first palette is the solid color one.
-        // Add a color selector to be able to change it.
-        led_bar_dsc_t led_bar_dsc = {
-            .palette = palette,
-            .period_ms = &default_period_ms,
-            .brightness = &default_brightness
-        };
-        lv_obj_t* palette_w = list_item_widget_create(
-            tab_color_w, palette->name, palette->desc, CHANNEL_CURRENT, &led_bar_dsc);
-        lv_obj_add_event_cb(palette_w, palette_clicked_cb, LV_EVENT_CLICKED, (void*) i);
-        // Assign to the third encoder
-        lv_group_add_obj(encoder_groups[2], palette_w);
-    }
-
-    // Fourth tab: parameters
-    String params_str = String(LV_SYMBOL_SETTINGS) + " Params";
-    tab_params_w = lv_tabview_add_tab(tabview_w, params_str.c_str());
-    lv_obj_add_style(tab_params_w, &style_list, 0);
-    static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-    static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
-    lv_obj_set_grid_dsc_array(tab_params_w, grid_col_dsc, grid_row_dsc);
-    // Title
-    channel_label_w = lv_label_create(tab_params_w);
-    lv_label_set_text(channel_label_w, "Channel");
-    lv_obj_add_style(channel_label_w, &style_title, 0);
-    lv_obj_set_grid_cell(channel_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 0, 1);
-    // LED bar
-    led_bar_dsc_t led_bar_dsc = {};
-    lv_obj_t* led_bar_w = led_bar_create(tab_params_w, 12, CHANNEL_CURRENT, &led_bar_dsc);
-    lv_obj_set_grid_cell(led_bar_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-    // Number of LEDs
-    lv_obj_t* num_leds_label_w = lv_label_create(tab_params_w);
-    lv_label_set_text(num_leds_label_w, "Number of LEDs");
-    lv_obj_add_style(num_leds_label_w, &style_text_muted, 0);
-    num_leds_w = number_input_create(tab_params_w, &led_strings[current_channel].num_leds, 1, max_leds_per_channel);
-    lv_obj_set_grid_cell(num_leds_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-    lv_obj_set_grid_cell(num_leds_w, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-    // Period
-    lv_obj_t* period_label_w = lv_label_create(tab_params_w);
-    lv_label_set_text(period_label_w, "Period (ms)");
-    lv_obj_add_style(period_label_w, &style_text_muted, 0);
-    period_w = number_input_create(tab_params_w, &led_strings[current_channel].update_period_ms, 100, 10000);
-    lv_obj_set_grid_cell(period_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 2, 1);
-    lv_obj_set_grid_cell(period_w, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 2, 1);
-    // Color ordering
-    lv_obj_t* color_ordering_label_w = lv_label_create(tab_params_w);
-    lv_label_set_text(color_ordering_label_w, "Color Order");
-    lv_obj_add_style(color_ordering_label_w, &style_text_muted, 0);
-    color_ordering_w = lv_dropdown_create(tab_params_w);
-    lv_dropdown_set_options(color_ordering_w, "RGB\nRBG\nGRB\nGBR\nBRG\nBGR\n");
-    lv_obj_set_width(color_ordering_w, 70);
-    lv_obj_add_event_cb(color_ordering_w, color_ordering_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_set_grid_cell(color_ordering_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 3, 1);
-    lv_obj_set_grid_cell(color_ordering_w, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
-    // Brightness
-    lv_obj_t* brightness_label_w = lv_label_create(tab_params_w);
-    lv_label_set_text(brightness_label_w, "Brightness");
-    lv_obj_add_style(brightness_label_w, &style_text_muted, 0);
-    brightness_value_w = lv_label_create(tab_params_w);
-    lv_label_set_text(brightness_value_w, "");
-    brightness_w = slider_create(tab_params_w, lv_color_hex(0x000080), brightness_pressed_cb);
-    lv_obj_set_grid_cell(brightness_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 4, 1);
-    lv_obj_set_grid_cell(brightness_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 4, 1);
-    lv_obj_set_grid_cell(brightness_value_w, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 4, 1);
+//    // Create the top level tab view
+//    tabview_w = lv_tabview_create(lv_screen_active());
+//    lv_tabview_set_tab_bar_size(tabview_w, tab_h);
+//    lv_obj_set_style_text_font(lv_screen_active(), font_normal, 0);
+//
+//    // A keyboard to fill in numbers
+//    number_keyboard_init();
+//
+//    // First tab: channel
+//    String system_str = String(LV_SYMBOL_LIST) + " Channel";
+//    tab_channel_w = lv_tabview_add_tab(tabview_w, system_str.c_str());
+//    lv_obj_set_flex_flow(tab_channel_w, LV_FLEX_FLOW_COLUMN);
+//    lv_obj_add_style(tab_channel_w, &style_list, 0);
+//    for (uint32_t i = 0; i < num_led_channels; i++) {
+//        led_bar_dsc_t led_bar_dsc = {};
+//        lv_obj_t* channel_w = list_item_widget_create(
+//            tab_channel_w, String(i).c_str(), NULL, i, &led_bar_dsc);
+//        lv_obj_add_event_cb(channel_w, channel_clicked_cb, LV_EVENT_CLICKED, (void*) i);
+//        // Assign to the first encoder
+//        lv_group_add_obj(encoder_groups[0], channel_w);
+//    }
+//
+//    // Second tab: patterns
+//    String pattern_str = String(LV_SYMBOL_LOOP) + " Pattern";
+//    tab_pattern_w = lv_tabview_add_tab(tabview_w, pattern_str.c_str());
+//    lv_obj_set_flex_flow(tab_pattern_w, LV_FLEX_FLOW_COLUMN);
+//    lv_obj_add_style(tab_pattern_w, &style_list, 0);
+//    for (uint32_t i = 0; i < num_led_patterns(); i++) {
+//        led_pattern_t* pattern = &led_patterns[i];
+//        led_bar_dsc_t led_bar_dsc = {
+//            .pattern_update = pattern->update,
+//            .period_ms = &default_period_ms,
+//            .brightness = &default_brightness
+//        };
+//        lv_obj_t* pattern_w = list_item_widget_create(
+//            tab_pattern_w, pattern->name, pattern->desc, CHANNEL_CURRENT, &led_bar_dsc);
+//        lv_obj_add_event_cb(pattern_w, pattern_clicked_cb, LV_EVENT_CLICKED, (void*) i);
+//        // Assign to the second encoder
+//        lv_group_add_obj(encoder_groups[1], pattern_w);
+//    }
+//
+//    // Third tab: colors
+//    String color_str = String(LV_SYMBOL_TINT) + " Color";
+//    tab_color_w = lv_tabview_add_tab(tabview_w, color_str.c_str());
+//    lv_obj_set_flex_flow(tab_color_w, LV_FLEX_FLOW_COLUMN);
+//    lv_obj_add_style(tab_color_w, &style_list, 0);
+//    // First item is the solid color selector
+//    color_selector_w = color_selector_create(tab_color_w, color_selector_cb);
+//    lv_group_add_obj(encoder_groups[2], color_selector_w);
+//    // Then one button per palette
+//    for (uint32_t i = 0; i < num_led_palettes(); i++) {
+//        led_palette_t* palette = &led_palettes[i];
+//        // The first palette is the solid color one.
+//        // Add a color selector to be able to change it.
+//        led_bar_dsc_t led_bar_dsc = {
+//            .palette = palette,
+//            .period_ms = &default_period_ms,
+//            .brightness = &default_brightness
+//        };
+//        lv_obj_t* palette_w = list_item_widget_create(
+//            tab_color_w, palette->name, palette->desc, CHANNEL_CURRENT, &led_bar_dsc);
+//        lv_obj_add_event_cb(palette_w, palette_clicked_cb, LV_EVENT_CLICKED, (void*) i);
+//        // Assign to the third encoder
+//        lv_group_add_obj(encoder_groups[2], palette_w);
+//    }
+//
+//    // Fourth tab: parameters
+//    String params_str = String(LV_SYMBOL_SETTINGS) + " Params";
+//    tab_params_w = lv_tabview_add_tab(tabview_w, params_str.c_str());
+//    lv_obj_add_style(tab_params_w, &style_list, 0);
+//    static int32_t grid_col_dsc[] = {LV_GRID_CONTENT, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+//    static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
+//    lv_obj_set_grid_dsc_array(tab_params_w, grid_col_dsc, grid_row_dsc);
+//    // Title
+//    channel_label_w = lv_label_create(tab_params_w);
+//    lv_label_set_text(channel_label_w, "Channel");
+//    lv_obj_add_style(channel_label_w, &style_title, 0);
+//    lv_obj_set_grid_cell(channel_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 0, 1);
+//    // LED bar
+//    led_bar_dsc_t led_bar_dsc = {};
+//    lv_obj_t* led_bar_w = led_bar_create(tab_params_w, 12, CHANNEL_CURRENT, &led_bar_dsc);
+//    lv_obj_set_grid_cell(led_bar_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
+//    // Number of LEDs
+//    lv_obj_t* num_leds_label_w = lv_label_create(tab_params_w);
+//    lv_label_set_text(num_leds_label_w, "Number of LEDs");
+//    lv_obj_add_style(num_leds_label_w, &style_text_muted, 0);
+//    num_leds_w = number_input_create(tab_params_w, &led_strings[current_channel].num_leds, 1, max_leds_per_channel);
+//    lv_obj_set_grid_cell(num_leds_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 1, 1);
+//    lv_obj_set_grid_cell(num_leds_w, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
+//    // Period
+//    lv_obj_t* period_label_w = lv_label_create(tab_params_w);
+//    lv_label_set_text(period_label_w, "Period (ms)");
+//    lv_obj_add_style(period_label_w, &style_text_muted, 0);
+//    period_w = number_input_create(tab_params_w, &led_strings[current_channel].update_period_ms, 100, 10000);
+//    lv_obj_set_grid_cell(period_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 2, 1);
+//    lv_obj_set_grid_cell(period_w, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 2, 1);
+//    // Color ordering
+//    lv_obj_t* color_ordering_label_w = lv_label_create(tab_params_w);
+//    lv_label_set_text(color_ordering_label_w, "Color Order");
+//    lv_obj_add_style(color_ordering_label_w, &style_text_muted, 0);
+//    color_ordering_w = lv_dropdown_create(tab_params_w);
+//    lv_dropdown_set_options(color_ordering_w, "RGB\nRBG\nGRB\nGBR\nBRG\nBGR\n");
+//    lv_obj_set_width(color_ordering_w, 70);
+//    lv_obj_add_event_cb(color_ordering_w, color_ordering_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
+//    lv_obj_set_grid_cell(color_ordering_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 3, 1);
+//    lv_obj_set_grid_cell(color_ordering_w, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
+//    // Brightness
+//    lv_obj_t* brightness_label_w = lv_label_create(tab_params_w);
+//    lv_label_set_text(brightness_label_w, "Brightness");
+//    lv_obj_add_style(brightness_label_w, &style_text_muted, 0);
+//    brightness_value_w = lv_label_create(tab_params_w);
+//    lv_label_set_text(brightness_value_w, "");
+//    brightness_w = slider_create(tab_params_w, lv_color_hex(0x000080), brightness_pressed_cb);
+//    lv_obj_set_grid_cell(brightness_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 4, 1);
+//    lv_obj_set_grid_cell(brightness_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 4, 1);
+//    lv_obj_set_grid_cell(brightness_value_w, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 4, 1);
 
     // The file menu
     static const file_menu_item_t file_menu_items[] = {
@@ -257,13 +293,14 @@ void led_tester_ui(void)
             .cb = reset_cb
         }
     };
-    file_menu_create(tabview_w, file_menu_items, 3);
+ //   file_menu_create(tabview_w, file_menu_items, 3);
+ //   file_menu_create(background_image, file_menu_items, 3);
 
     // Attempt to load the data from the EEPROM
     led_array_load();
 
     // Select the first channel
-    lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
+//    lv_obj_send_event(lv_obj_get_child(tab_channel_w, 0), LV_EVENT_CLICKED, NULL);
 }
 
 //

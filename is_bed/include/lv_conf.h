@@ -17,6 +17,17 @@
 #ifndef LV_CONF_H
 #define LV_CONF_H
 
+/* Screen resolution and rotation */
+#ifdef HOSYOND_3_2_TFT
+  #define TFT_HOR_RES   240
+  #define TFT_VER_RES   320
+#endif
+#ifdef HOSYOND_4_0_TFT
+  #define TFT_HOR_RES   320
+  #define TFT_VER_RES   480
+#endif
+#define TFT_ROTATION  LV_DISPLAY_ROTATION_0
+
 /*If you need to include anything here, do it inside the `__ASSEMBLY__` guard */
 #if  0 && defined(__ASSEMBLY__)
 #include "my_include.h"
@@ -450,7 +461,7 @@
 #define LV_ATTRIBUTE_MEM_ALIGN
 
 /*Attribute to mark large constant arrays for example font's bitmaps*/
-#define LV_ATTRIBUTE_LARGE_CONST
+#define LV_ATTRIBUTE_LARGE_CONST __attribute__((section(".progmem")))
 
 /*Compiler prefix for a big array declaration in RAM*/
 #define LV_ATTRIBUTE_LARGE_RAM_ARRAY

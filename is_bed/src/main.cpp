@@ -1,7 +1,7 @@
 #include "led_array.h"
 #include <Arduino.h>
 #include <lvgl.h>
-#include "ui/led_tester_ui.h"
+#include "ui/is_bed_ui.h"
 #include <TFT_eSPI.h>
 #include <FT6336U.h>
 #include <OctoWS2811.h>
@@ -38,17 +38,6 @@ OctoWS2811 leds(max_leds_per_channel, display_memory, drawing_memory, config, nu
 #define NUM_ENCODERS 4 // Number of encoders
 const int SS_ENC_SWITCH_PIN[NUM_ENCODERS] = {12, 14, 17, 9}; // The pins for the encoder switches
 Adafruit_seesaw encoders(&Wire);
-
-// Screen resolution and rotation
-#ifdef HOSYOND_3_2_TFT
-  #define TFT_HOR_RES   240
-  #define TFT_VER_RES   320
-#endif
-#ifdef HOSYOND_4_0_TFT
-  #define TFT_HOR_RES   320
-  #define TFT_VER_RES   480
-#endif
-#define TFT_ROTATION  LV_DISPLAY_ROTATION_0
 
 // LVGL draws into these buffers (This is double buffered)
 // Ref: https://docs.lvgl.io/8.0/porting/display.html
@@ -139,7 +128,7 @@ void setup() {
   led_array_init();
 
   // Build the UI
-  led_tester_ui();
+  is_bed_ui();
 
   // Start the LEDs
   leds.begin();
