@@ -8,6 +8,7 @@
 #include "number_input.h"
 #include "file_menu.h"
 #include "slider.h"
+#include "brightness_slider.h"
 #include <Arduino.h>
 #include <FastLED.h>
 
@@ -141,15 +142,10 @@ void is_bed_ui(void)
 //    lv_obj_add_style(brightness_label_w, &style_text_muted, 0);
 //    brightness_value_w = lv_label_create(lv_screen_active());
 //    lv_label_set_text(brightness_value_w, "");
-    center_brightness_w = slider_create(lv_screen_active(), lv_color_hex(0x000080), brightness_changed_cb, encoder_groups[0]);
-    front_brightness_w = slider_create(lv_screen_active(), lv_color_hex(0x000080), brightness_changed_cb, encoder_groups[1]);
-    headboard_brightness_w = slider_create(lv_screen_active(), lv_color_hex(0x000080), brightness_changed_cb, encoder_groups[2]);
-    cage_brightness_w = slider_create(lv_screen_active(), lv_color_hex(0x000080), brightness_changed_cb, encoder_groups[3]);
-    //lv_obj_set_width(brightness_w, 200);
-    //lv_obj_set_grid_cell(brightness_label_w, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 4, 1);
-    //lv_obj_set_grid_cell(brightness_w, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-    //lv_obj_set_grid_cell(brightness_value_w, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 4, 1);
-
+    center_brightness_w = brightness_slider_create(lv_screen_active(), brightness_changed_cb, encoder_groups[0]);
+    front_brightness_w = brightness_slider_create(lv_screen_active(), brightness_changed_cb, encoder_groups[1]);
+    headboard_brightness_w = brightness_slider_create(lv_screen_active(), brightness_changed_cb, encoder_groups[2]);
+    cage_brightness_w = brightness_slider_create(lv_screen_active(), brightness_changed_cb, encoder_groups[3]);
 }
 
 //
