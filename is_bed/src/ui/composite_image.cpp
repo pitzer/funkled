@@ -73,33 +73,10 @@ static void composite_image_timer_cb(lv_timer_t * timer)
     // Get the user data
     lv_obj_t* canvas_w = (lv_obj_t*) lv_timer_get_user_data(timer);
     composite_image_dsc_t* dsc = (composite_image_dsc_t*) lv_obj_get_user_data(canvas_w);
-
-    uint32_t p1 = (lv_tick_get() / 10) % 512;
-    if (p1 > 255) {
-        p1 = 511 - p1;
-    }
-    uint32_t p2 = (lv_tick_get() / 8 + 128) % 512;
-    if (p2 > 255) {
-        p2 = 511 - p2;
-    }
-    uint32_t p3 = (lv_tick_get() / 12 + 196) % 512;
-    if (p3 > 255) {
-        p3 = 511 - p3;
-    }
-    uint32_t p4 = (lv_tick_get() / 7 + 64) % 512;
-    if (p4 > 255) {
-        p4 = 511 - p4;
-    }
-
-    dsc->layers[0].color.red = p1;
-    dsc->layers[1].color.blue = p2;
-    dsc->layers[2].color.green = p3;
-    dsc->layers[3].color.red = p4;
-
     // Update the composite image
     uint32_t tic = lv_tick_get();
     composite_image_update(dsc);
     lv_obj_invalidate(canvas_w);
     uint32_t toc = lv_tick_get();
-    LV_LOG_INFO("Composite image updated in %lu ms", toc - tic);
+    LV_LOG_TRACE("Composite image updated in %lu ms", toc - tic);
 }

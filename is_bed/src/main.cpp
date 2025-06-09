@@ -216,8 +216,8 @@ static void lv_encoder_read( lv_indev_t * indev, lv_indev_data_t * data )
   uint32_t encoder_index = (uint32_t) lv_indev_get_user_data(indev);
   // Read the switch state
   data->state = encoders.digitalRead(SS_ENC_SWITCH_PIN[encoder_index]) ? LV_INDEV_STATE_REL : LV_INDEV_STATE_PR;
-  // Read the encoder delta
-  data->enc_diff = -encoders.getEncoderDelta(encoder_index);
+  // Read the encoder delta. Apply some gain to make the encoder more sensitive.
+  data->enc_diff = - encoders.getEncoderDelta(encoder_index) * 15;
 }
 
 // Refresh the LEDs
