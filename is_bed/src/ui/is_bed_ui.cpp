@@ -135,17 +135,15 @@ void is_bed_ui(void)
     lv_style_init(&style_list_button_focused);
     lv_style_set_border_width(&style_list_button_focused, 4);
 
-    background_image_w = composite_image_create(lv_screen_active(), &composite_dsc);
+    // Make sure that the top level screen is not scrollable
+    lv_obj_t* screen_w = lv_screen_active();
+    lv_obj_clear_flag(screen_w, LV_OBJ_FLAG_SCROLLABLE);
 
-//    lv_obj_t* brightness_label_w = lv_label_create(lv_screen_active());
-//    lv_label_set_text(brightness_label_w, "Brightness");
-//    lv_obj_add_style(brightness_label_w, &style_text_muted, 0);
-//    brightness_value_w = lv_label_create(lv_screen_active());
-//    lv_label_set_text(brightness_value_w, "");
-    center_brightness_w = brightness_slider_create(lv_screen_active(), brightness_changed_cb, encoder_groups[0]);
-    front_brightness_w = brightness_slider_create(lv_screen_active(), brightness_changed_cb, encoder_groups[1]);
-    headboard_brightness_w = brightness_slider_create(lv_screen_active(), brightness_changed_cb, encoder_groups[2]);
-    cage_brightness_w = brightness_slider_create(lv_screen_active(), brightness_changed_cb, encoder_groups[3]);
+    background_image_w = composite_image_create(screen_w, &composite_dsc);
+    center_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[0]);
+    front_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[1]);
+    headboard_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[2]);
+    cage_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[3]);
 }
 
 //

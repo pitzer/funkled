@@ -3,10 +3,6 @@
 #include <Arduino.h>
 
 //
-// Typedefs
-//
-
-//
 // Static prototypes
 //
 static void colorwheel_pressed_cb(lv_event_t * e);
