@@ -41,6 +41,36 @@ lv_obj_t* composite_image_create(lv_obj_t* parent, const composite_image_dsc_t* 
 
 // Update the canvas with the composite image
 void composite_image_update(const composite_image_dsc_t* dsc) {
+    // First, for each layer, compute the average color of the pixels
+    // TODO: For now, as a hack, we just recompute the average color of the first half of the LEDs in each string.
+    //       we should instead use the color of the LEDs as actually rendered by OctoWS2811.
+    lv_color_t layer_colors[dsc->layer_count];
+    const uint32_t num_leds = 16;
+    for (uint32_t i = 0; i < dsc->layer_count; i++) {
+        CRGB leds[num_leds];
+        led_patterns[led_strings[i].pattern_index].update(
+            millis() * (100 + i) / 100, // To create a phase shift between the patterns
+            led_strings[i].update_period_ms,
+            composed_palette(&led_palettes[led_strings[i].palette_index], led_strings[i].single_color),
+            led_strings[i].single_color,
+            num_leds,
+            leds);
+        uint32_t total_red = 0;
+        uint32_t total_green = 0;
+        uint32_t total_blue = 0;
+        for (uint32_t j = 0; j < num_leds / 2; j++) {
+            CRGB color = leds[j];
+            total_red += color.red;
+            total_green += color.green;
+            total_blue += color.blue;
+        }
+        layer_colors[i].red = total_red * led_strings[i].brightness * 2 / 255 / num_leds;
+        layer_colors[i].green = total_green * led_strings[i].brightness * 2 / 255 / num_leds;
+        layer_colors[i].blue = total_blue * led_strings[i].brightness * 2 / 255 / num_leds;
+    }
+
+
+    // Then, for each pixel in the background image, composite the layers on top of it
     for (uint32_t y = 0; y < dsc->background_image_dsc.header.h; y++) {
         for (uint32_t x = 0; x < dsc->background_image_dsc.header.w; x++) {
             uint32_t layer_index = x + y * dsc->background_image_dsc.header.w;
@@ -53,10 +83,11 @@ void composite_image_update(const composite_image_dsc_t* dsc) {
                 // Get the pixel value from the layer image
                 uint8_t layer_pixel = layer->image_dsc.data[layer_index];
                 // Scale the layer color by the pixel value
-                r += (layer->color.red * layer_pixel) / 255;
-                g += (layer->color.green * layer_pixel) / 255;
-                b += (layer->color.blue * layer_pixel) / 255;
+                r += (layer_colors[i].red * layer_pixel) / 255;
+                g += (layer_colors[i].green * layer_pixel) / 255;
+                b += (layer_colors[i].blue * layer_pixel) / 255;
             }
+            // Clamp the color values to the range [0, 255]
             if (r > 255) r = 255;
             if (g > 255) g = 255;
             if (b > 255) b = 255;

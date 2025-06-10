@@ -12,7 +12,7 @@ void led_array_init() {
         led_strings[i].num_leds = 100;
         led_strings[i].color_ordering = WS2811_GRB;
         led_strings[i].pattern_index = 0;
-        led_strings[i].palette_index = 0;
+        led_strings[i].palette_index = 6 + i;
         led_strings[i].single_color = CRGB::Red;
         led_strings[i].update_period_ms = 3000;
         led_strings[i].brightness = 255;

@@ -1,12 +1,8 @@
 #include "is_bed_ui.h"
 #include "composite_image.h"
-#include "color_selector.h"
-#include "led_bar.h"
 #include "led_pattern.h"
 #include "led_palette.h"
 #include "led_array.h"
-#include "number_input.h"
-#include "file_menu.h"
 #include "slider.h"
 #include "brightness_slider.h"
 #include <Arduino.h>
@@ -15,10 +11,6 @@
 //
 // Constants
 //
-// The default period to use when displaying patterns
-const uint32_t default_period_ms = 3000;
-// The default brightness to use when displaying patterns
-const uint8_t default_brightness = 255;
 
 //
 // Static prototypes
@@ -31,13 +23,6 @@ static void brightness_changed_cb(lv_event_t* e);
 // Fonts
 static const lv_font_t * font_large;
 static const lv_font_t * font_normal;
-// Styles
-static lv_style_t style_text_muted;
-static lv_style_t style_title;
-static lv_style_t style_list;
-static lv_style_t style_list_button;
-static lv_style_t style_list_button_checked;
-static lv_style_t style_list_button_focused;
 // Some widgets we want to keep around for easy access
 static lv_obj_t* background_image_w;
 static lv_obj_t* center_brightness_w;
@@ -57,16 +42,16 @@ LV_IMAGE_DECLARE(cage);
 static composite_image_layer_t layers[] = {
     {
         .image_dsc = center,
-        .color = lv_color_hex(0x000000)
+        .led_string = &led_strings[0]
     }, {
         .image_dsc = front,
-        .color = lv_color_hex(0x000000)
+        .led_string = &led_strings[1]
     }, {
         .image_dsc = headboard,
-        .color = lv_color_hex(0x000000)
+        .led_string = &led_strings[2]
     }, {
         .image_dsc = cage,
-        .color = lv_color_hex(0x000000)
+        .led_string = &led_strings[3]
     }
 };
 static DMAMEM uint8_t composite_buffer[TFT_HOR_RES * TFT_VER_RES * 3];
@@ -76,9 +61,6 @@ static composite_image_dsc_t composite_dsc = {
     .layers = layers,
     .layer_count = sizeof(layers) / sizeof(layers[0])
 };
-
-
-
 
 //
 // Global functions
@@ -92,9 +74,6 @@ void is_bed_ui(void)
                           font_normal);
 
     // Figure out which input devices we have.
-    // We could assign them to a group and let LVGL handle the link to the sliders,
-    // but LVGL will not update the slider value until the encoder is clicked, which is
-    // not what we want. So we will handle the input devices ourselves.
     for (lv_indev_t * indev = lv_indev_get_next(NULL); indev != NULL; indev = lv_indev_get_next(indev)) {
         if (lv_indev_get_type(indev) == LV_INDEV_TYPE_ENCODER) {
             // Get the encoder index from the user data
@@ -107,61 +86,21 @@ void is_bed_ui(void)
         }
     }
 
-    // Styles
-    // Muted text
-    lv_style_init(&style_text_muted);
-    lv_style_set_text_opa(&style_text_muted, LV_OPA_50);
-    // Title
-    lv_style_init(&style_title);
-    lv_style_set_text_font(&style_title, font_large);
-    // List
-    lv_style_init(&style_list);
-    lv_style_set_pad_all(&style_list, 7);
-    lv_style_set_pad_gap(&style_list, 7);
-    // Button inside a list
-    lv_style_init(&style_list_button);
-    lv_style_set_border_width(&style_list_button, 0);
-    lv_style_set_bg_opa(&style_list_button, 35);
-    lv_style_set_text_color(&style_list_button, lv_color_hex(0x202020));
-    lv_style_set_pad_all(&style_list_button, 5);
-    lv_style_set_pad_gap(&style_list_button, 10);
-    lv_style_set_height(&style_list_button, LV_SIZE_CONTENT);
-    lv_style_set_width(&style_list_button, LV_PCT(97));
-
-    lv_style_init(&style_list_button_checked);
-    lv_style_set_border_width(&style_list_button_checked, 2);
-    lv_style_set_bg_opa(&style_list_button_checked, 35);
-    lv_style_set_text_color(&style_list_button_checked, lv_color_hex(0x202020));
-    lv_style_init(&style_list_button_focused);
-    lv_style_set_border_width(&style_list_button_focused, 4);
-
     // Make sure that the top level screen is not scrollable
     lv_obj_t* screen_w = lv_screen_active();
     lv_obj_clear_flag(screen_w, LV_OBJ_FLAG_SCROLLABLE);
 
     background_image_w = composite_image_create(screen_w, &composite_dsc);
-    center_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[0]);
-    front_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[1]);
-    headboard_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[2]);
-    cage_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[3]);
-
-    // For each slider, assign the index of the corresponding LEDs
-    lv_obj_set_user_data(center_brightness_w, (void*) 0);
-    lv_obj_set_user_data(front_brightness_w, (void*) 1);
-    lv_obj_set_user_data(headboard_brightness_w, (void*) 2);
-    lv_obj_set_user_data(cage_brightness_w, (void*) 3);
-
+    center_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[0], 0);
+    front_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[1], 1);
+    headboard_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[2], 2);
+    cage_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[3], 3);
 }
-
-//
-// Helper functions
-//
 
 
 //
 // Callbacks
 //
-
 static void brightness_changed_cb(lv_event_t* e) {
     // Get the slider widget that triggered the event
     lv_obj_t* slider_w = (lv_obj_t*) lv_event_get_target(e);
@@ -178,9 +117,6 @@ static void brightness_changed_cb(lv_event_t* e) {
         }
         lv_slider_set_value(slider_w, brightness, LV_ANIM_OFF); // Update the slider value
     }
-
-    // update the corresponding LED string
-    composite_dsc.layers[index].color.blue = brightness;
-    composite_dsc.layers[index].color.red = brightness;
-    composite_dsc.layers[index].color.green = brightness;
+    // Update the corresponding LED string brightness
+    led_strings[index].brightness = brightness;
 }

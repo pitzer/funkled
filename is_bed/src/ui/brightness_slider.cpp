@@ -19,9 +19,11 @@ static void timer_hide_slider_cb(lv_timer_t* timer);
 //
 // Global functions
 //
-lv_obj_t* brightness_slider_create(lv_obj_t* parent, lv_event_cb_t slider_changed_cb, lv_group_t* encoder_group) {
+lv_obj_t* brightness_slider_create(lv_obj_t* parent, lv_event_cb_t slider_changed_cb, lv_group_t* encoder_group, uint32_t index) {
     // Create the slider widgget.
     lv_obj_t* slider_w = slider_create(parent, lv_color_hex(0x800000), slider_changed_cb);
+    // Set the user data to the index of the corresponding LED string
+    lv_obj_set_user_data(slider_w, (void*) index);
     // Add our own callback to the slider, to take care of the animation
     lv_obj_add_event_cb(slider_w, slider_changed_local_cb, LV_EVENT_KEY, NULL);
     lv_obj_add_event_cb(slider_w, slider_changed_local_cb, LV_EVENT_PRESSING, NULL);
@@ -38,6 +40,9 @@ lv_obj_t* brightness_slider_create(lv_obj_t* parent, lv_event_cb_t slider_change
     lv_group_focus_obj(slider_w);
     lv_group_set_editing(encoder_group, true);
     lv_group_focus_freeze(encoder_group, true);
+    // Call the callback to set the initial value
+    lv_slider_set_value(slider_w, 0, LV_ANIM_OFF);
+    lv_obj_send_event(slider_w, LV_EVENT_KEY, NULL);
     return slider_w;
 }
 
