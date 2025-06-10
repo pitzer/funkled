@@ -40,25 +40,22 @@ static lv_style_t style_list_button_checked;
 static lv_style_t style_list_button_focused;
 // Some widgets we want to keep around for easy access
 static lv_obj_t* background_image_w;
-static lv_obj_t* cage_brightness_w;
 static lv_obj_t* center_brightness_w;
 static lv_obj_t* front_brightness_w;
 static lv_obj_t* headboard_brightness_w;
+static lv_obj_t* cage_brightness_w;
 
 // The encoder groups
 static lv_group_t * encoder_groups[4];
 
 // The composite image of the bed
 LV_IMAGE_DECLARE(background);
-LV_IMAGE_DECLARE(cage);
 LV_IMAGE_DECLARE(center);
 LV_IMAGE_DECLARE(front);
 LV_IMAGE_DECLARE(headboard);
+LV_IMAGE_DECLARE(cage);
 static composite_image_layer_t layers[] = {
     {
-        .image_dsc = cage,
-        .color = lv_color_hex(0x000000)
-    }, {
         .image_dsc = center,
         .color = lv_color_hex(0x000000)
     }, {
@@ -66,6 +63,9 @@ static composite_image_layer_t layers[] = {
         .color = lv_color_hex(0x000000)
     }, {
         .image_dsc = headboard,
+        .color = lv_color_hex(0x000000)
+    }, {
+        .image_dsc = cage,
         .color = lv_color_hex(0x000000)
     }
 };
@@ -144,65 +144,19 @@ void is_bed_ui(void)
     front_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[1]);
     headboard_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[2]);
     cage_brightness_w = brightness_slider_create(screen_w, brightness_changed_cb, encoder_groups[3]);
+
+    // For each slider, assign the index of the corresponding LEDs
+    lv_obj_set_user_data(center_brightness_w, (void*) 0);
+    lv_obj_set_user_data(front_brightness_w, (void*) 1);
+    lv_obj_set_user_data(headboard_brightness_w, (void*) 2);
+    lv_obj_set_user_data(cage_brightness_w, (void*) 3);
+
 }
 
 //
 // Helper functions
 //
 
-// A list item widget with an LED bar.
-static lv_obj_t* list_item_widget_create(
-    lv_obj_t* parent,
-    const char* name,
-    const char* desc,
-    uint32_t channel,
-    const led_bar_dsc_t* led_bar_dsc
-) {
-    // The top button widget
-    lv_obj_t * btn_w = lv_btn_create(parent);
-    lv_obj_add_style(btn_w, &style_list_button, LV_STATE_DEFAULT);
-    lv_obj_add_style(btn_w, &style_list_button_checked, LV_STATE_CHECKED);
-    lv_obj_add_style(btn_w, &style_list_button_focused, LV_STATE_FOCUSED);
-
-    // Different layouts if the description is present or not
-    if (desc) {
-        static int32_t grid_col_dsc[] = {LV_GRID_FR(30), LV_GRID_FR(70), LV_GRID_TEMPLATE_LAST};
-        static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
-        lv_obj_set_grid_dsc_array(btn_w, grid_col_dsc, grid_row_dsc);
-    } else {
-        static int32_t grid_col_dsc[] = {17, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-        static int32_t grid_row_dsc[] = {LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
-        lv_obj_set_grid_dsc_array(btn_w, grid_col_dsc, grid_row_dsc);
-    }
-
-    // The name at the top
-    lv_obj_t * name_w = lv_label_create(btn_w);
-    lv_label_set_text(name_w, name);
-    lv_obj_add_style(name_w, &style_title, 0);
-    lv_obj_set_grid_cell(name_w, LV_GRID_ALIGN_STRETCH, 0, 1, LV_GRID_ALIGN_START, 0, 1);
-    lv_label_set_long_mode(name_w, LV_LABEL_LONG_WRAP);
-    
-    // The description
-    if (desc) {
-        lv_obj_t* desc_w = lv_label_create(btn_w);
-        lv_obj_add_style(desc_w, &style_text_muted, 0);
-        lv_label_set_text(desc_w, desc);
-        lv_obj_set_grid_cell(desc_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_START, 0, 1);
-        lv_label_set_long_mode(desc_w, LV_LABEL_LONG_WRAP);
-    }
-
-    lv_obj_t* last_panel_w;
-    // The led bar
-    last_panel_w = led_bar_create(btn_w, 16, channel, led_bar_dsc);
-    lv_obj_set_width(last_panel_w, LV_PCT(100));
-    if (desc) {
-        lv_obj_set_grid_cell(last_panel_w, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_END, 1, 1);
-    } else {
-        lv_obj_set_grid_cell(last_panel_w, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_END, 0, 1);
-    }
-
-    return btn_w;
-}
 
 //
 // Callbacks
@@ -211,11 +165,22 @@ static lv_obj_t* list_item_widget_create(
 static void brightness_changed_cb(lv_event_t* e) {
     // Get the slider widget that triggered the event
     lv_obj_t* slider_w = (lv_obj_t*) lv_event_get_target(e);
-    // Get the new brightness value
+    // Get the index of the corresponding LEDs from the user data
+    uint32_t index = (uint32_t) lv_obj_get_user_data(slider_w);
+    // Get the current brightness value from the slider
     uint32_t brightness = lv_slider_get_value(slider_w);
-    lv_group_set_editing(encoder_groups[0], true);
-    composite_dsc.layers[0].color.blue = brightness;
+    // When the user presses the button, we want to update the brightness to zero or full
+    if (lv_event_get_code(e) == LV_EVENT_KEY && lv_event_get_key(e) == LV_KEY_ENTER) {
+        if (brightness > 128) {
+            brightness = 0; // Turn off the LEDs
+        } else {
+            brightness = 255; // Turn on the LEDs
+        }
+        lv_slider_set_value(slider_w, brightness, LV_ANIM_OFF); // Update the slider value
+    }
 
-    //lv_label_set_text(brightness_value_w, String(brightness).c_str());
-    //led_strings[current_channel].brightness = brightness;
+    // update the corresponding LED string
+    composite_dsc.layers[index].color.blue = brightness;
+    composite_dsc.layers[index].color.red = brightness;
+    composite_dsc.layers[index].color.green = brightness;
 }

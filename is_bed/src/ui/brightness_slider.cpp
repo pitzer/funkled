@@ -30,6 +30,7 @@ lv_obj_t* brightness_slider_create(lv_obj_t* parent, lv_event_cb_t slider_change
     lv_obj_set_style_opa(slider_w, LV_OPA_TRANSP, 0);
     lv_obj_set_height(slider_w, 30);
     lv_obj_set_width(slider_w, LV_PCT(95));
+    lv_obj_set_style_bg_opa(slider_w, LV_OPA_TRANSP, LV_PART_INDICATOR);
     lv_obj_set_style_pad_right(slider_w, 15, 0);
     lv_obj_set_style_pad_left(slider_w, 15, 0);
     // Register the slider with the encoder group
@@ -45,6 +46,8 @@ lv_obj_t* brightness_slider_create(lv_obj_t* parent, lv_event_cb_t slider_change
 //
 static void slider_changed_local_cb(lv_event_t* e) {
     lv_obj_t* slider_w = (lv_obj_t*) lv_event_get_target(e);
+    // Make sure the slider is still focused, even if the button was clicked
+    lv_group_set_editing(lv_obj_get_group(slider_w), true);
     // First we check if there is already a timer waiting
     if (slider_hide_timer != NULL) {
         lv_obj_t* timer_slider_w = (lv_obj_t*) lv_timer_get_user_data(slider_hide_timer);
@@ -57,7 +60,9 @@ static void slider_changed_local_cb(lv_event_t* e) {
             // This is the same slider, we can just reset the timer
             lv_timer_reset(slider_hide_timer);
         }
-    } else {
+    }
+    // Check again for the timer, it might have been deleted
+    if (slider_hide_timer == NULL) {
         // The timer does not exist, create it
         slider_hide_timer = lv_timer_create(timer_hide_slider_cb, 3000, slider_w); // Hide after 3 seconds
         lv_timer_set_repeat_count(slider_hide_timer, 1); // Only run once
