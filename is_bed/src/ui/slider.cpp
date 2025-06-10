@@ -16,6 +16,8 @@ lv_obj_t* slider_create(lv_obj_t* parent, lv_color_t color, lv_event_cb_t slider
     lv_obj_add_event_cb(slider_w, slider_pressed_cb, LV_EVENT_PRESSING, parent);
     lv_obj_add_event_cb(slider_w, slider_pressed_cb, LV_EVENT_RELEASED, parent);
     lv_obj_add_event_cb(slider_w, slider_pressed_cb, LV_EVENT_KEY, parent);
+    lv_obj_add_event_cb(slider_w, slider_pressed_cb, LV_EVENT_LONG_PRESSED, parent);
+    lv_obj_add_event_cb(slider_w, slider_pressed_cb, LV_EVENT_LONG_PRESSED_REPEAT, parent);
     lv_obj_add_flag(slider_w, LV_OBJ_FLAG_EVENT_BUBBLE);
     return slider_w;
 }
