@@ -118,5 +118,5 @@ static void brightness_changed_cb(lv_event_t* e) {
         lv_slider_set_value(slider_w, brightness, LV_ANIM_OFF); // Update the slider value
     }
     // Update the corresponding LED string brightness
-    led_strings[index].brightness = brightness;
+    led_zones[index].brightness = brightness;
 }

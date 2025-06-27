@@ -14,7 +14,7 @@ typedef void (*led_pattern_func_t)(
     const CRGBPalette16* palette,
     // The single color to use for the pattern, If it wants a single color
     CRGB single_color,
-    // The number of LEDs in the string
+    // The number of LEDs in the segment
     uint32_t num_leds,
     // The array of LEDs to update
     CRGB* leds);
