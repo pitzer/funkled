@@ -185,6 +185,81 @@ led_segment_t post_rear_right_segments[] = {
     },
 };
 
+led_segment_t headboard_segments[] = {
+    {
+        .name = "Top left",
+        .num_leds = 10,
+        .string_offset = 0,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Cross Top Left",
+        .num_leds = 8,
+        .string_offset = 10,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Top Middle",
+        .num_leds = 8,
+        .string_offset = 18,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Cross Top Right",
+        .num_leds = 8,
+        .string_offset = 26,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Top Right",
+        .num_leds = 10,
+        .string_offset = 34,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Right",
+        .num_leds = 14,
+        .string_offset = 44,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Bottom Right",
+        .num_leds = 10,
+        .string_offset = 58,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Cross Bottom Right",
+        .num_leds = 8,
+        .string_offset = 68,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Bottom Middle",
+        .num_leds = 8,
+        .string_offset = 76,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Cross Bottom Left",
+        .num_leds = 8,
+        .string_offset = 84,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Bottom left",
+        .num_leds = 10,
+        .string_offset = 92,
+        .zone = ZONE_HEADBOARD,
+    },
+    {
+        .name = "Left",
+        .num_leds = 14,
+        .string_offset = 102,
+        .zone = ZONE_HEADBOARD,
+    },
+};
+
 led_string_t led_strings[] = {
     {
         .name = "Post Front Left",
@@ -205,6 +280,11 @@ led_string_t led_strings[] = {
         .name = "Post Rear Right",
         .num_segments = sizeof(post_rear_right_segments) / sizeof(post_rear_right_segments[0]),
         .segments = post_rear_right_segments,
+    },
+    {
+        .name = "Headboard",
+        .num_segments = sizeof(headboard_segments) / sizeof(headboard_segments[0]),
+        .segments = headboard_segments,
     },
 };
 
