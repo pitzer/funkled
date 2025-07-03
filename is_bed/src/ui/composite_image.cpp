@@ -54,11 +54,11 @@ void composite_image_update(const composite_image_dsc_t *dsc)
     for (uint32_t i = 0; i < dsc->layer_count; i++)
     {
         CRGB leds[num_leds];
-        led_patterns[led_strings[i].pattern_index].update(
+        led_patterns[led_zones[i].pattern_index].update(
             millis() * (100 + i) / 100, // To create a phase shift between the patterns
-            led_strings[i].update_period_ms,
-            composed_palette(&led_palettes[led_strings[i].palette_index], led_strings[i].single_color),
-            led_strings[i].single_color,
+            led_zones[i].update_period_ms,
+            composed_palette(&led_palettes[led_zones[i].palette_index], led_zones[i].single_color),
+            led_zones[i].single_color,
             num_leds,
             leds);
         uint32_t total_red = 0;
@@ -71,9 +71,9 @@ void composite_image_update(const composite_image_dsc_t *dsc)
             total_green += color.green;
             total_blue += color.blue;
         }
-        layer_colors[i].red = total_red * led_strings[i].brightness * 2 / 255 / num_leds;
-        layer_colors[i].green = total_green * led_strings[i].brightness * 2 / 255 / num_leds;
-        layer_colors[i].blue = total_blue * led_strings[i].brightness * 2 / 255 / num_leds;
+        layer_colors[i].red = total_red * led_zones[i].brightness * 2 / 255 / num_leds;
+        layer_colors[i].green = total_green * led_zones[i].brightness * 2 / 255 / num_leds;
+        layer_colors[i].blue = total_blue * led_zones[i].brightness * 2 / 255 / num_leds;
     }
 
     // Then, for each pixel in the background image, composite the layers on top of it
