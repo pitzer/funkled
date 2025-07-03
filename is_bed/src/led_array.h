@@ -23,20 +23,21 @@ const uint32_t CHANNEL_CURRENT = 0xFFFFFFFF;
 //
 // Typedefs
 //
-// Descriptor for a segment of an LED string. Multiple segments for a string.
+// Descriptor for a segment of an LED string. A segment is a continues set of LED elements.
+// Multiple segments form a string. Each segment belongs to a zone.
 typedef struct
 {
     // The name of the segment.
     const char *name;
-    // Number of LEDs in the segment
+    // Number of LEDs in the segment.
     uint32_t num_leds;
-    // Offset in number of LEDs where the segment starts within the LED string
+    // Offset in number of LEDs where the segment starts within the LED string.
     uint32_t string_offset;
     // The zone this segment belongs to.
     uint8_t zone;
 } led_segment_t;
 
-// Descriptor for an LED string.
+// Descriptor for an LED string. A string is a set of segments connected in series.
 typedef struct
 {
     // The name of the string.
@@ -47,33 +48,33 @@ typedef struct
     led_segment_t *segments;
 } led_string_t;
 
-// Descriptor of a zone. A zone consists of multiple LED segments, 
+// Descriptor of a zone. A zone consists of multiple LED segments,
 // potentially accross multiple LED strings. Each zone has a unified
 // pattern and brightness.
 typedef struct
 {
     // The name of the zone.
     const char *name;
-    // The index of the pattern currently used by the segment
+    // The index of the pattern currently used by the zone
     uint32_t pattern_index;
     // The color for non-palette patterns
     CRGB single_color;
     // The color ordering of the strip. Uses the OctoWS2811 constants
     uint8_t color_ordering;
-    // The index of the palette currently used by the segment
+    // The index of the palette currently used by the zone
     uint32_t palette_index;
     // The period of the pattern update in milliseconds
     uint32_t update_period_ms;
-    // The brightness of the segment
+    // The brightness of the zone
     uint8_t brightness;
 } led_zone_t;
 
 //
 // Globals
 //
-// The LED string descriptors
+// The set of LED zones
 extern led_zone_t led_zones[];
-// The LED string descriptors
+// The set of LED strings
 extern led_string_t led_strings[];
 // The currently selected LED channel
 extern uint32_t current_channel;

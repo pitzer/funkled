@@ -20,7 +20,14 @@ static const uint8_t default_brightness = 255;
 CRGB leds_crgb[max_leds_per_channel];
 
 led_zone_t led_zones[] = {
-
+    {
+        .name = "Cage",
+        .pattern_index = default_pattern_index,
+        .single_color = default_single_color,
+        .palette_index = default_palette_index,
+        .update_period_ms = default_update_period_ms,
+        .brightness = default_brightness,
+    },
     {
         .name = "Center",
         .pattern_index = default_pattern_index,
@@ -39,14 +46,6 @@ led_zone_t led_zones[] = {
     },
     {
         .name = "Headboard",
-        .pattern_index = default_pattern_index,
-        .single_color = default_single_color,
-        .palette_index = default_palette_index,
-        .update_period_ms = default_update_period_ms,
-        .brightness = default_brightness,
-    },
-    {
-        .name = "Cage",
         .pattern_index = default_pattern_index,
         .single_color = default_single_color,
         .palette_index = default_palette_index,
