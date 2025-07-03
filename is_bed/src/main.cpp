@@ -233,47 +233,50 @@ static void led_refresh_cb(lv_timer_t *timer)
     uint32_t now = millis();
     for (uint32_t i = 0; i < num_led_channels; i++)
     {
-        // Temporary buffer to render the LEDs
-        CRGB leds_crgb[led_strings[i].num_leds];
-        led_patterns[led_strings[i].pattern_index].update(
-            now,
-            led_strings[i].update_period_ms,
-            composed_palette(&led_palettes[led_strings[i].palette_index], led_strings[i].single_color),
-            led_strings[i].single_color,
-            led_strings[i].num_leds,
-            leds_crgb);
-        for (uint32_t j = 0; j < max_leds_per_channel; j++)
+        led_string_t *led_string = &led_strings[i];
+        for (uint32_t j = 0; j < led_string->num_segments; j++)
         {
-            uint32_t color_u32 = 0x000000;
-            if (j < led_strings[i].num_leds)
+            led_segment_t *segment = &led_string->segments[j];
+            led_zone_t *zone = &led_zones[segment->zone];
+            led_patterns[zone->pattern_index]
+                .update(
+                    now,
+                    zone->update_period_ms,
+                    composed_palette(&led_palettes[zone->palette_index], zone->single_color),
+                    zone->single_color,
+                    segment->num_leds,
+                    leds_crgb + segment->string_offset);
+            for (uint32_t k = segment->string_offset; k < segment->string_offset + segment->num_leds; k++)
             {
-                leds_crgb[j].nscale8(led_strings[i].brightness);
-                switch (led_strings[i].color_ordering)
+                uint32_t color_u32 = 0x000000;
+                leds_crgb[k].nscale8(zone->brightness);
+                switch (zone->color_ordering)
                 {
                 case WS2811_RGB:
-                    color_u32 = leds_crgb[j].r << 16 | leds_crgb[j].g << 8 | leds_crgb[j].b;
+                    color_u32 = leds_crgb[k].r << 16 | leds_crgb[k].g << 8 | leds_crgb[k].b;
                     break;
                 case WS2811_RBG:
-                    color_u32 = leds_crgb[j].r << 16 | leds_crgb[j].b << 8 | leds_crgb[j].g;
+                    color_u32 = leds_crgb[k].r << 16 | leds_crgb[k].b << 8 | leds_crgb[k].g;
                     break;
                 case WS2811_GRB:
-                    color_u32 = leds_crgb[j].g << 16 | leds_crgb[j].r << 8 | leds_crgb[j].b;
+                    color_u32 = leds_crgb[k].g << 16 | leds_crgb[k].r << 8 | leds_crgb[k].b;
                     break;
                 case WS2811_GBR:
-                    color_u32 = leds_crgb[j].g << 16 | leds_crgb[j].b << 8 | leds_crgb[j].r;
+                    color_u32 = leds_crgb[k].g << 16 | leds_crgb[k].b << 8 | leds_crgb[k].r;
                     break;
                 case WS2811_BRG:
-                    color_u32 = leds_crgb[j].b << 16 | leds_crgb[j].r << 8 | leds_crgb[j].g;
+                    color_u32 = leds_crgb[k].b << 16 | leds_crgb[k].r << 8 | leds_crgb[k].g;
                     break;
                 case WS2811_BGR:
-                    color_u32 = leds_crgb[j].b << 16 | leds_crgb[j].g << 8 | leds_crgb[j].r;
+                    color_u32 = leds_crgb[k].b << 16 | leds_crgb[k].g << 8 | leds_crgb[k].r;
                     break;
                 default:
                     color_u32 = 0x000000;
                     break;
                 }
+
+                leds.setPixel(i * max_leds_per_channel + k, color_u32);
             }
-            leds.setPixel(i * max_leds_per_channel + j, color_u32);
         }
     }
     leds.show();
