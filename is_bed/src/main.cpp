@@ -244,6 +244,8 @@ static void led_refresh_cb(lv_timer_t *timer)
                     zone->update_period_ms,
                     composed_palette(&led_palettes[zone->palette_index], zone->single_color),
                     zone->single_color,
+                    i,
+                    j,
                     segment->num_leds,
                     leds_crgb + segment->string_offset);
             for (uint32_t k = segment->string_offset; k < segment->string_offset + segment->num_leds; k++)

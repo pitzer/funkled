@@ -42,6 +42,8 @@ typedef struct
 {
     // The name of the string.
     const char *name;
+    // Number of LEDs in the string.
+    uint32_t num_leds;
     // Number of segments in the strip
     uint32_t num_segments;
     // The segment descriptors
@@ -87,5 +89,22 @@ extern CRGB leds_crgb[max_leds_per_channel];
 void led_array_init();
 void led_array_save();
 void led_array_load();
+
+// Static function to count total number of LEDs addressed by the pattern.
+template <std::size_t N>
+constexpr uint32_t leds_in_string(const led_segment_t (&led_segments)[N],
+                                  std::size_t i = 0U)
+{
+    return i < N ? (led_segments[i].num_leds +
+                    leds_in_string(led_segments, i + 1U))
+                 : 0;
+}
+
+// Static function to count total number of LEDs addressed by the pattern.
+template <std::size_t N>
+constexpr uint32_t segments_in_string(const led_segment_t (&led_segments)[N])
+{
+    return N;
+}
 
 #endif // LED_PALETTE_H

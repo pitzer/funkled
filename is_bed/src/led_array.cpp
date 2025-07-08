@@ -187,22 +187,26 @@ led_segment_t post_rear_right_segments[] = {
 led_string_t led_strings[] = {
     {
         .name = "Post Front Left",
-        .num_segments = sizeof(post_front_left_segments) / sizeof(post_front_left_segments[0]),
+        .num_leds = leds_in_string(post_front_left_segments),
+        .num_segments = segments_in_string(post_front_left_segments),
         .segments = post_front_left_segments,
     },
     {
         .name = "Post Front Right",
-        .num_segments = sizeof(post_front_right_segments) / sizeof(post_front_right_segments[0]),
+        .num_leds = leds_in_string(post_front_right_segments),
+        .num_segments = segments_in_string(post_front_right_segments),
         .segments = post_front_right_segments,
     },
     {
         .name = "Post Rear Left",
-        .num_segments = sizeof(post_rear_left_segments) / sizeof(post_rear_left_segments[0]),
+        .num_leds = leds_in_string(post_rear_left_segments),
+        .num_segments = segments_in_string(post_rear_left_segments),
         .segments = post_rear_left_segments,
     },
     {
         .name = "Post Rear Right",
-        .num_segments = sizeof(post_rear_right_segments) / sizeof(post_rear_right_segments[0]),
+        .num_leds = leds_in_string(post_rear_right_segments),
+        .num_segments = segments_in_string(post_rear_right_segments),
         .segments = post_rear_right_segments,
     },
 };
