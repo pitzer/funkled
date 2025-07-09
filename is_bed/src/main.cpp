@@ -7,6 +7,10 @@
 #include <OctoWS2811.h>
 #include <Wire.h>
 #include <Adafruit_seesaw.h>
+#include <SD.h>
+#include <MTP_Teensy.h>
+
+const int SD_ChipSelect = BUILTIN_SDCARD;
 
 // Touchscreen
 #define TOUCH_RST_PIN 37
@@ -145,12 +149,23 @@ void setup()
     Serial.println("Setup done");
     digitalWrite(STATUS_GREEN, HIGH);
     digitalWrite(STATUS_RED, LOW);
+
+    MTP.begin();
+
+    // Add the SD Card
+    if (SD.begin(SD_ChipSelect))
+    {
+        MTP.addFilesystem(SD, "SD_Card");
+        Serial.println("SD Card initialized");
+    }
 }
 
 void loop()
 {
     // Main LVGL loop
     lv_timer_handler();
+
+    MTP.loop();
 }
 
 // Provides LVGL with access to the timer
