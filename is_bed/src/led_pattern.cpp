@@ -58,34 +58,6 @@ void blink_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16 *pa
     }
 }
 
-void fire_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16 *palette, CRGB single_color, uint32_t string_index, uint32_t segment_index, uint32_t num_leds, CRGB *leds)
-{
-    led_string_t *led_string = &led_strings[segment_index];
-    led_segment_t *segment = &led_string->segments[segment_index];
-    const uint32_t fire_period_ms = 60000;
-    const uint32_t step = (time_ms * fire.animation_steps / fire_period_ms) % fire.animation_steps;
-
-    for (uint32_t i = 0; i < num_leds; i++)
-    {
-        leds[i] = fire.pixels[led_string->num_leds * step +
-                              segment->string_offset + i];
-    }
-}
-
-void rainbow_pattern(uint32_t time_ms, uint32_t period_ms, const CRGBPalette16 *palette, CRGB single_color, uint32_t string_index, uint32_t segment_index, uint32_t num_leds, CRGB *leds)
-{
-    led_string_t *led_string = &led_strings[segment_index];
-    led_segment_t *segment = &led_string->segments[segment_index];
-    const uint32_t rainbow_period_ms = 60000;
-    const uint32_t step = (time_ms * rainbow.animation_steps / rainbow_period_ms) % rainbow.animation_steps;
-
-    for (uint32_t i = 0; i < num_leds; i++)
-    {
-        leds[i] = rainbow.pixels[led_string->num_leds * step +
-                                 segment->string_offset + i];
-    }
-}
-
 led_pattern_t led_patterns[] = {
     {
         .name = "Rotate",
@@ -106,16 +78,6 @@ led_pattern_t led_patterns[] = {
         .name = "Blink",
         .desc = "Blink ON and OFF",
         .update = blink_pattern,
-    },
-    {
-        .name = "Fire",
-        .desc = "Fire pattern",
-        .update = fire_pattern,
-    },
-    {
-        .name = "Rainbow",
-        .desc = "Rainbow pattern",
-        .update = rainbow_pattern,
     },
 };
 

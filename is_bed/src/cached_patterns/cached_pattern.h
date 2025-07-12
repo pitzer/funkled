@@ -9,9 +9,13 @@
 #include <OctoWS2811.h>
 #include <FastLED.h>
 
+
+
 // Struct to describe a cached pattern resource.
 typedef struct
 {
+    // Two bytes indicating pattern format.
+    uint16_t magic;
     // The color ordering used by the pattern
     uint8_t color_ordering;
     // The number of animation steps stored in the pattern.
@@ -22,8 +26,16 @@ typedef struct
     const uint32_t *num_leds_per_segment;
     // Size of the pattern in bytes
     uint32_t num_pixels;
-    // Pointer to the data of the pattern
-    const CRGB *pixels;
+    // Number of bytes in one animation step 
+    uint32_t stride;
+} cached_pattern_header_t;
+
+typedef struct
+{
+    cached_pattern_header_t header;
+    // Size of the image in bytes
+    uint32_t data_size;
+    const void *path;
 } cached_pattern_t;
 
 // Attribute to mark large constant binary arrays used in cached patterns
